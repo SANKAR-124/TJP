@@ -26,6 +26,28 @@ class User(UserMixin,db.Model):
     created_at=db.Column(db.DateTime,default=datetime.utcnow)
     def get_id(self):
         return str(self.User_ID)
+class JOURNEY(db.Model):
+    __tablename__='JOURNEY'
+    Jid=db.Column(db.Integer,primary_key=True)
+    J_name=db.Column(db.String(50),nullable=False)
+    Start_date=db.Column(db.DateTime,nullable=False)
+    end_date=db.Column(db.DateTime,nullable=False)
+    description=db.Column(db.Text,nullable=True)
+    created_at=db.Column(db.DateTime,default=datetime.utcnow)
+    User_ID=db.Column(db.Integer,db.ForeignKey('USER.User_ID'),nullable=False)
+
+class DESTINATION(db.Model):
+    __tablename__='DESTINATION'
+    Did=db.Column(db.Integer,primary_key=True)
+    Jid=db.Column(db.Integer,db.ForeignKey('fk_journey_desti'))
+    place_name=db.Column(db.String(50),nullable=False)
+    visit_order=db.Column(db.Integer,nullable=False,unique=True)
+    visit_status=db.Column(db.String(10),nullable=False)
+    is_main=db.Column(db.Boolean,default=False)
+    map=db.Column(db.String(255),nullable=True)
+    created_at=db.Column(db.DateTime,default=datetime.utcnow)
+
+
 
 login_manager=LoginManager(app)
 login_manager.login_view='login'
@@ -78,43 +100,6 @@ def login():
             return redirect(url_for('login'))
     else:
         return render_template('login.html')
-# @app.route('/login', methods=['GET', 'POST'])
-# def login():
-#     if request.method == 'POST':
-#         login_id = request.form.get('login_id')
-#         password = request.form.get('password')
-
-#         # Debug 1: Check what came from the form
-#         print(f"--- DEBUG START ---")
-#         print(f"Form Login ID: {login_id}") 
-#         print(f"Form Password: {password}")
-
-#         # Search for user
-#         user = User.query.filter(or_(User.User_name == login_id, User.Email_ID == login_id)).first()
-        
-#         # Debug 2: Check if user exists
-#         if user:
-#             print(f"User Found: {user.User_name}")
-#             print(f"Stored Hash in DB: {user.password_hash}")
-            
-#             # Check password
-#             is_correct = check_password_hash(user.password_hash, password)
-#             print(f"Password Match Result: {is_correct}")
-            
-#             if is_correct:
-#                 print("--- LOGIN SUCCESS ---")
-#                 login_user(user)
-#                 return redirect(url_for('dashboard'))
-#             else:
-#                 print("--- PASSWORD MISMATCH ---")
-#                 flash("Password does not match", 'fail')
-#         else:
-#             print("--- USER NOT FOUND ---")
-#             flash("User not found", 'fail')
-
-#         return redirect(url_for('login'))
-
-#     return render_template('login.html')
     
 @app.route('/logout')
 @login_required
@@ -125,7 +110,28 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    return render_template('dashboard.html')
+    user_records=JOURNEY.query.filter_by(User_ID=current_user.User_ID).all()
+    return render_template('dashboard.html',records=user_records)
+
+@app.route('/create_journey',methods=['GET','POST'])
+@login_required
+def create_journey():
+    if request.method=='POST':
+        J_name=request.form.get('J_name')
+        start_date_str=request.form.get('start_date')
+        end_date_str=request.form.get('end_date')
+        description=request.form.get('description')
+        
+        # Convert date strings to datetime objects
+        start_date=datetime.strptime(start_date_str, '%Y-%m-%d')
+        end_date=datetime.strptime(end_date_str, '%Y-%m-%d')
+        
+        new_journey=JOURNEY(J_name=J_name,Start_date=start_date,end_date=end_date,description=description,User_ID=current_user.User_ID)
+        db.session.add(new_journey)
+        db.session.commit()
+        return jsonify(success=True, message="Journey created successfully")
+    else:
+        return render_template('c_journey.html')
 
 
 if __name__=="__main__":

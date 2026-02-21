@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Journey</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .form-container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        .form-container h2 {
+            font-size: 28px;
+            color: #667eea;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .form-line {
+            width: 60px;
+            height: 4px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 20px auto 30px;
+            border-radius: 2px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .form-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-create {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-create:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .btn-create:active {
+            transform: translateY(0);
+        }
+        
+        .btn-cancel {
+            background: #e0e0e0;
+            color: #333;
+        }
+        
+        .btn-cancel:hover {
+            background: #d0d0d0;
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h2>Create New Journey</h2>
+        <div class="form-line"></div>
+        
+        <form id="journeyForm" method="POST" action="/create_journey">
+            <div class="form-group">
+                <label for="J_name">Journey Name *</label>
+                <input 
+                    type="text" 
+                    id="J_name" 
+                    name="J_name" 
+                    placeholder="e.g., Summer Vacation 2026" 
+                    required
+                >
+            </div>
+            
+            <div class="form-group">
+                <label for="start_date">Start Date *</label>
+                <input 
+                    type="date" 
+                    id="start_date" 
+                    name="start_date" 
+                    required
+                >
+            </div>
+            
+            <div class="form-group">
+                <label for="end_date">End Date *</label>
+                <input 
+                    type="date" 
+                    id="end_date" 
+                    name="end_date" 
+                    required
+                >
+            </div>
+            
+            <div class="form-group">
+                <label for="description">Description</label>
+                <textarea 
+                    id="description" 
+                    name="description" 
+                    placeholder="Describe your journey..."
+                ></textarea>
+            </div>
+            
+            <div class="form-buttons">
+                <button type="button" class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+                <button type="submit" class="btn btn-create">Create Journey</button>
+            </div>
+        </form>
+    </div>
+    
+    <script>
+        // Handle form submission
+        document.getElementById('journeyForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Validate dates
+            const startDate = new Date(document.getElementById('start_date').value);
+            const endDate = new Date(document.getElementById('end_date').value);
+            
+            if (endDate < startDate) {
+                alert('End date must be after start date');
+                return;
+            }
+            
+            // Submit form via fetch
+            fetch('/create_journey', {
+                method: 'POST',
+                body: new FormData(this)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // alert('Journey created successfully!');
+                    closeModal();
+                } else {
+                    alert('Error creating journey. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error creating journey. Please try again.');
+            });
+        });
+        
+        // Close modal function
+        function closeModal() {
+            if (window.parent !== window) {
+                // If in iframe/modal, send message to parent
+                window.parent.postMessage('closeModal', '*');
+            }
+        }
+    </script>
+</body>
+</html>
