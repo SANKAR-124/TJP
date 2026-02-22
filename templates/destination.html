@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ destination.place_name }} Workspace</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .hero-placeholder { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 200px; border-radius: .5rem; display: flex; align-items: center; justify-content: center; color: white; }
+        .meta { color: #6b7280; }
+    </style>
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-light bg-white shadow-sm">
+    <div class="container">
+        <a href="/journey/{{ destination.Jid }}" class="btn btn-link text-decoration-none">&larr; Back to Journey</a>
+        <span class="navbar-brand mb-0 h1">Workspace</span>
+        <div></div>
+    </div>
+</nav>
+
+<main class="container my-4">
+    <div class="row g-4">
+        
+        <div class="col-12 col-md-8">
+            
+            <div class="hero-placeholder shadow-sm mb-4">
+                <h1 class="display-4 fw-bold">{{ destination.place_name }}</h1>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h3 class="h5 mb-0 py-2">📖 Travel Logs</h3>
+                </div>
+                <div class="card-body">
+                    
+                    {% if logs %}
+                        {% for log in logs %}
+                            <div class="p-3 mb-3 bg-light border rounded">
+                                <p class="mb-0">{{ log.note_test }}</p>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No logs yet. Write your first memory!</p>
+                    {% endif %}
+                    
+                    <hr>
+                    
+                    <form id="logForm">
+                        <div class="mb-3">
+                            <label class="form-label">New Log Entry</label>
+                            <textarea class="form-control" name="note" rows="3" required placeholder="What did you do here?"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Log</button>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h3 class="h5 mb-0 py-2">⏰ Reminders & Tasks</h3>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Reminder feature coming soon...</p>
+                </div>
+            </div>
+
+        </div>
+
+        <aside class="col-12 col-md-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Destination Info</h5>
+                    <ul class="list-unstyled mb-0 mt-3">
+                        <li class="mb-2"><strong>Status:</strong> <span class="badge bg-primary">{{ destination.visit_status }}</span></li>
+                        <li class="mb-2"><strong>Visit Order:</strong> #{{ destination.visit_order }}</li>
+                        <li class="mb-2"><strong>Main Destination:</strong> {% if destination.is_main %}Yes{% else %}No{% endif %}</li>
+                    </ul>
+                </div>
+            </div>
+
+            {% if destination.map %}
+            <div class="card shadow-sm">
+                <div class="card-body p-2 text-center">
+                    <a href="{{ destination.map }}" target="_blank" class="btn btn-outline-primary w-100">🗺️ Open Map Link</a>
+                </div>
+            </div>
+            {% endif %}
+        </aside>
+
+    </div>
+</main>
+
+<script>
+    document.getElementById('logForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        
+        fetch(`/travel_log/{{ destination.Did }}`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload(); // Reload to show the new log!
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -277,14 +277,16 @@
             
             {% if records %}
                 {% for row in records %}
-                    <div class="journey-item">
-                        <h3>{{ row.J_name }}</h3>
-                        <p><strong>Start Date:</strong> {{ row.Start_date }}</p>
-                        <p><strong>End Date:</strong> {{ row.end_date }}</p>
-                        {% if row.description %}
-                            <p><strong>Description:</strong> {{ row.description }}</p>
-                        {% endif %}
-                    </div>
+                    <a href="{{ url_for('view_journey', Jid=row.Jid) }}" style="text-decoration: none; color: inherit;">
+                        <div class="journey-item">
+                            <h3>{{ row.J_name }}</h3>
+                            <p><strong>Start Date:</strong> {{ row.Start_date }}</p>
+                            <p><strong>End Date:</strong> {{ row.end_date }}</p>
+                            {% if row.description %}
+                                <p><strong>Description:</strong> {{ row.description }}</p>
+                            {% endif %}
+                        </div>
+                    </a>
                 {% endfor %}
             {% else %}
                 <div class="no-journeys">
