@@ -63,7 +63,21 @@ class REMINDER(db.Model):
     status=db.Column(db.SmallInteger,default=0)
     created_at=db.Column(db.DateTime,default=datetime.utcnow)
 
+class BUDGET(db.Model):
+    __tablename__='BUDGET'
+    Bid=db.Column(db.Integer,primary_key=True)
+    Jid=db.Column(db.Integer,db.ForeignKey('JOURNEY.Jid'),nullable=False)
+    t_b_amount=db.Column(db.Float)
+    created_at=db.Column(db.DateTime,default=datetime.utcnow)
 
+class EXPENSE(db.Model):
+    __tablename__='EXPENSE'
+    Eid=db.Column(db.Integer,primary_key=True)
+    Jid=db.Column(db.Integer,db.ForeignKey('JOURNEY.Jid'),nullable=False)
+    amount=db.Column(db.Decimal,nullable=False)
+    description=db.Column(db.Text,nullable=True)
+    expense_date=db.Column(db.DateTime,nullable=False)
+    created_at=db.Column(db.DateTime,default=datetime.utcnow)
 
 
 login_manager=LoginManager(app)
