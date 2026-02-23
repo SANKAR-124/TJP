@@ -67,14 +67,14 @@ class BUDGET(db.Model):
     __tablename__='BUDGET'
     Bid=db.Column(db.Integer,primary_key=True)
     Jid=db.Column(db.Integer,db.ForeignKey('JOURNEY.Jid'),nullable=False)
-    t_b_amount=db.Column(db.Float)
+    t_b_amount=db.Column(db.Float,nullable=False)
     created_at=db.Column(db.DateTime,default=datetime.utcnow)
 
 class EXPENSE(db.Model):
     __tablename__='EXPENSE'
     Eid=db.Column(db.Integer,primary_key=True)
     Jid=db.Column(db.Integer,db.ForeignKey('JOURNEY.Jid'),nullable=False)
-    amount=db.Column(db.Decimal,nullable=False)
+    amount=db.Column(db.DECIMAL(10,2),nullable=False)
     description=db.Column(db.Text,nullable=True)
     expense_date=db.Column(db.DateTime,nullable=False)
     created_at=db.Column(db.DateTime,default=datetime.utcnow)
@@ -171,7 +171,25 @@ def view_journey(Jid):
         flash("Access denied or Journey not found.", "error")
         return redirect(url_for('dashboard'))
     saved_destinations=DESTINATION.query.filter_by(Jid=Jid).all()
-    return render_template('journey.html',JOURNEY=target_journey,DESTINATION=saved_destinations)
+    
+    # Fetch all pending reminders for destinations in this journey
+    pending_reminders = []
+    for destination in saved_destinations:
+        reminders = REMINDER.query.filter_by(Did=destination.Did, status=0).all()
+        for reminder in reminders:
+            pending_reminders.append({
+                'Rid': reminder.Rid,
+                'Did': destination.Did,
+                'destination_name': destination.place_name,
+                'rem_text': reminder.rem_text,
+                'status': reminder.status
+            })
+    budget=BUDGET.query.filter_by(Jid=Jid).first()
+    expenses=EXPENSE.query.filter_by(Jid=Jid).order_by(EXPENSE.expense_date.desc()).all()
+    total_spent=sum(float(exp.amount) for exp in expenses)
+    remaining=(budget.t_b_amount-total_spent)if budget else 0
+    
+    return render_template('journey.html',JOURNEY=target_journey,DESTINATION=saved_destinations,REMINDERS=pending_reminders,BUDGET=budget,EXPENSES=expenses,TOTAL_SPENT=total_spent,REMAINING= remaining)
 
 @app.route('/add_destination/<int:Jid>',methods=['POST'])
 @login_required
@@ -283,7 +301,8 @@ def view_destination(Did):
         flash("Access denied", "error")
         return redirect(url_for('dashboard'))
     logs=TRAVEL_LOG.query.filter_by(Did=Did).all()
-    return render_template("destination.html",destination=target_dest,logs=logs)
+    reminders=REMINDER.query.filter_by(Did=Did).all()
+    return render_template("destination.html",destination=target_dest,logs=logs,reminders=reminders)
 
 @app.route('/travel_log/<int:Did>',methods=['GET','POST'])
 @login_required
@@ -307,6 +326,194 @@ def travel_log(Did):
         db.session.rollback()
         print(f"DATABASE ERROR: {e}")
         return jsonify(success=False,message="An error occurred while adding the log")
+@app.route('/add_reminder/<int:Did>',methods=['POST'])
+@login_required
+def add_reminder(Did):
+    target_dest=db.session.get(DESTINATION,Did)
+    if not target_dest:
+        return jsonify(success=False,message="Destination not found")
+    target_journey=db.session.get(JOURNEY,target_dest.Jid)
+    if not target_journey or target_journey.User_ID!=current_user.User_ID:
+        return jsonify(success=False,message="Access denied")
+    rem_text=request.form.get('rem_text')
+    status=request.form.get('status')
+    new_reminder=REMINDER(Did=Did,rem_text=rem_text,status=0)
+    db.session.add(new_reminder)
+    db.session.commit()
+    return jsonify(success=True,message="Reminder added successfully")
+    
+@app.route('/toggle_reminder/<int:Rid>', methods=['POST'])
+@login_required
+def toggle_reminder(Rid):
+    try:
+        rem_toggle = db.session.get(REMINDER, Rid)
+        
+        if not rem_toggle:
+            return jsonify(success=False, message="Reminder not found"), 404
+
+        # THE FLIP (Boolean)
+        if rem_toggle.status == 0:
+            rem_toggle.status = 1
+        else:
+            rem_toggle.status = 0
+        
+        db.session.commit()
+        return jsonify(success=True, new_status=rem_toggle.status)
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"ERROR: {e}")
+        return jsonify(success=False), 500
+
+@app.route('/get_journey_reminders/<int:Jid>')
+@login_required
+def get_journey_reminders(Jid):
+    target_journey=db.session.get(JOURNEY,Jid)
+    if not target_journey or target_journey.User_ID != current_user.User_ID:
+        return jsonify(success=False, message="Access denied"), 403
+    
+    saved_destinations=DESTINATION.query.filter_by(Jid=Jid).all()
+    
+    # Fetch all pending reminders for destinations in this journey
+    pending_reminders = []
+    for destination in saved_destinations:
+        reminders = REMINDER.query.filter_by(Did=destination.Did, status=0).all()
+        for reminder in reminders:
+            pending_reminders.append({
+                'Rid': reminder.Rid,
+                'Did': destination.Did,
+                'destination_name': destination.place_name,
+                'rem_text': reminder.rem_text,
+                'status': reminder.status
+            })
+    
+    return jsonify(success=True, reminders=pending_reminders)
+
+# --- DELETE TRAVEL LOG ---
+@app.route('/delete_log/<int:Lid>', methods=['POST'])
+@login_required
+def delete_log(Lid):
+    target_log = db.session.get(TRAVEL_LOG, Lid)
+    if not target_log:
+        return jsonify(success=False, message="Log not found"), 404
+        
+    # Climb the tree: Log -> Destination -> Journey
+    target_dest = db.session.get(DESTINATION, target_log.Did)
+    target_journey = db.session.get(JOURNEY, target_dest.Jid)
+    
+    # Gatekeeper check
+    if not target_journey or target_journey.User_ID != current_user.User_ID:
+        return jsonify(success=False, message="Access denied"), 403
+        
+    try:
+        db.session.delete(target_log)
+        db.session.commit()
+        return jsonify(success=True, message="Log deleted successfully")
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(success=False, message="Database error"), 500
+
+# --- DELETE REMINDER ---
+@app.route('/delete_reminder/<int:Rid>', methods=['POST'])
+@login_required
+def delete_reminder(Rid):
+    target_rem = db.session.get(REMINDER, Rid)
+    if not target_rem:
+        return jsonify(success=False, message="Reminder not found"), 404
+        
+    # Climb the tree: Reminder -> Destination -> Journey
+    target_dest = db.session.get(DESTINATION, target_rem.Did)
+    target_journey = db.session.get(JOURNEY, target_dest.Jid)
+    
+    if not target_journey or target_journey.User_ID != current_user.User_ID:
+        return jsonify(success=False, message="Access denied"), 403
+        
+    try:
+        db.session.delete(target_rem)
+        db.session.commit()
+        return jsonify(success=True, message="Reminder deleted successfully")
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(success=False, message="Database error"), 500
+    
+# --- SET BUDGET ---
+@app.route('/add_budget/<int:Jid>', methods=['POST'])
+@login_required
+def add_budget(Jid):
+    target_journey = db.session.get(JOURNEY, Jid)
+    if not target_journey or target_journey.User_ID != current_user.User_ID:
+        return jsonify(success=False, message="Access denied"), 403
+
+    # Rule: Only ONE budget per journey
+    existing_budget = BUDGET.query.filter_by(Jid=Jid).first()
+    if existing_budget:
+        return jsonify(success=False, message="Budget already exists!"), 400
+
+    amount = request.form.get('amount', type=float)
+    if not amount or amount <= 0:
+        return jsonify(success=False, message="Amount must be greater than 0"), 400
+
+    try:
+        new_budget = BUDGET(Jid=Jid, t_b_amount=amount)
+        db.session.add(new_budget)
+        db.session.commit()
+        return jsonify(success=True, message="Budget set successfully")
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(success=False, message="Database error"), 500
+
+# --- ADD EXPENSE ---
+@app.route('/add_expense/<int:Jid>', methods=['POST'])
+@login_required
+def add_expense(Jid):
+    target_journey = db.session.get(JOURNEY, Jid)
+    if not target_journey or target_journey.User_ID != current_user.User_ID:
+        return jsonify(success=False, message="Access denied"), 403
+
+    # Ensure a budget exists first
+    budget = BUDGET.query.filter_by(Jid=Jid).first()
+    if not budget:
+        return jsonify(success=False, message="Please set a budget first!"), 400
+
+    amount = request.form.get('amount', type=float)
+    if not amount or amount <= 0:
+        return jsonify(success=False, message="Amount must be greater than 0"), 400
+
+    description = request.form.get('description')
+    expense_date_str = request.form.get('expense_date')
+    
+    # If the user didn't pick a date, default to right now
+    expense_date = datetime.strptime(expense_date_str, '%Y-%m-%d') if expense_date_str else datetime.utcnow()
+
+    try:
+        new_expense = EXPENSE(Jid=Jid, amount=amount, description=description, expense_date=expense_date)
+        db.session.add(new_expense)
+        db.session.commit()
+        return jsonify(success=True, message="Expense added successfully")
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(success=False, message="Database error"), 500
+
+# --- DELETE EXPENSE ---
+@app.route('/delete_expense/<int:Eid>', methods=['POST'])
+@login_required
+def delete_expense(Eid):
+    target_expense = db.session.get(EXPENSE, Eid)
+    if not target_expense:
+        return jsonify(success=False, message="Expense not found"), 404
+
+    # Verify Journey Ownership directly from the expense
+    target_journey = db.session.get(JOURNEY, target_expense.Jid)
+    if not target_journey or target_journey.User_ID != current_user.User_ID:
+        return jsonify(success=False, message="Access denied"), 403
+
+    try:
+        db.session.delete(target_expense)
+        db.session.commit()
+        return jsonify(success=True)
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(success=False, message="Database error"), 500
 
 if __name__=="__main__":
     app.run(debug=True)

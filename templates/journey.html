@@ -89,6 +89,19 @@
             padding: 40px 20px;
             max-width: 1000px;
             margin: 0 auto;
+            margin-left: 0;
+        }
+        
+        @media (min-width: 1200px) {
+            .main-content {
+                margin-left: 320px;
+            }
+        }
+        
+        @media (min-width: 1500px) {
+            .main-content {
+                margin-left: 380px;
+            }
         }
         
         .journey-header {
@@ -446,9 +459,168 @@
         .btn-toggle-status:active {
             transform: translateY(0);
         }
+
+        /* Reminders Sidebar Styling */
+        .reminders-sidebar {
+            position: fixed;
+            left: 0;
+            top: 70px;
+            height: calc(100vh - 70px);
+            width: 320px;
+            background: white;
+            box-shadow: 2px 0 15px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            z-index: 50;
+            overflow: hidden;
+        }
+
+        .reminders-header {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 0;
+        }
+
+        .reminders-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px 0;
+            display: flex;
+            flex-direction: column-reverse;
+        }
+
+        .reminder-item {
+            padding: 15px 15px;
+            margin: 10px 10px;
+            background: #f8f9fa;
+            border-left: 4px solid #764ba2;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            animation: scrollUp 0.5s ease-out;
+            cursor: pointer;
+        }
+
+        @keyframes scrollUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .reminder-item:hover {
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+            transform: translateX(-5px);
+            background: #eff0f7;
+        }
+
+        .reminder-destination {
+            font-weight: 600;
+            color: #667eea;
+            font-size: 13px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .reminder-text {
+            color: #333;
+            font-size: 14px;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .reminders-empty {
+            padding: 30px 15px;
+            text-align: center;
+            color: #999;
+            font-size: 14px;
+        }
+
+        /* Adjust main content for sidebar */
+        @media (min-width: 1200px) {
+            body {
+                margin-left: 320px;
+            }
+        }
+
+        @media (max-width: 1199px) {
+            .reminders-sidebar {
+                width: 280px;
+            }
+            
+            body {
+                margin-left: 280px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .reminders-sidebar {
+                width: 100%;
+                height: 150px;
+                top: auto;
+                bottom: 0;
+                border-radius: 15px 15px 0 0;
+            }
+
+            body {
+                margin-left: 0;
+                margin-bottom: 150px;
+            }
+
+            .reminders-container {
+                flex-direction: row;
+                overflow-x: auto;
+                overflow-y: hidden;
+                padding: 15px 0;
+            }
+
+            .reminder-item {
+                min-width: 200px;
+                flex-shrink: 0;
+            }
+        }
+
+        .reminder-item.removing {
+            animation: fadeOut 0.3s ease-out forwards;
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- Reminders Sidebar -->
+    <aside class="reminders-sidebar">
+        <div class="reminders-header">📌 Pending Reminders</div>
+        <div class="reminders-container" id="remindersContainer">
+            {% if REMINDERS|length > 0 %}
+                {% for reminder in REMINDERS %}
+                    <div class="reminder-item" data-reminder-id="{{ reminder.Rid }}" data-destination-id="{{ reminder.Did }}">
+                        <div class="reminder-destination">{{ reminder.destination_name }}</div>
+                        <div class="reminder-text">{{ reminder.rem_text }}</div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="reminders-empty">No pending reminders</div>
+            {% endif %}
+        </div>
+    </aside>
+    
     <!-- Navbar -->
     <nav class="navbar">
         <div class="navbar-brand">{{ JOURNEY.J_name }}</div>
@@ -770,15 +942,19 @@
             }
         }
         
+        
         // Open Edit Journey Modal
         function openEditJourneyModal() {
             const modal = document.getElementById('editJourneyModal');
             
-            // Populate form with journey data
-            document.getElementById('edit_j_name').value = `{{ JOURNEY.J_name }}`;
-            document.getElementById('edit_start_date').value = `{{ JOURNEY.Start_date.strftime('%Y-%m-%d') }}`;
-            document.getElementById('edit_end_date').value = `{{ JOURNEY.end_date.strftime('%Y-%m-%d') }}`;
-            document.getElementById('edit_description').value = `{{ JOURNEY.description or '' }}`;
+            // Populate form with journey data using the safe |tojson filter
+            document.getElementById('edit_j_name').value = {{ JOURNEY.J_name|tojson|safe }};
+            document.getElementById('edit_start_date').value = "{{ JOURNEY.Start_date.strftime('%Y-%m-%d') }}";
+            document.getElementById('edit_end_date').value = "{{ JOURNEY.end_date.strftime('%Y-%m-%d') }}";
+            
+            // For the description, use a safe default if it's None, then convert to JSON
+            const desc = {{ (JOURNEY.description or "")|tojson|safe }};
+            document.getElementById('edit_description').value = desc;
             
             modal.classList.add('show');
         }
@@ -868,6 +1044,82 @@
                 alert('Error toggling status. Please try again.');
             });
         }
+
+        // Real-time reminder updates
+        let remindersContainer = document.getElementById('remindersContainer');
+
+        function updateReminders() {
+            fetch(`/get_journey_reminders/${journeyId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const reminders = data.reminders;
+                        
+                        // Get current reminder IDs in the DOM
+                        const currentReminders = new Set(
+                            Array.from(document.querySelectorAll('.reminder-item'))
+                                .map(el => parseInt(el.getAttribute('data-reminder-id')))
+                        );
+                        
+                        // Get reminder IDs from the API
+                        const apiReminders = new Set(reminders.map(r => r.Rid));
+                        
+                        // Find reminders to remove (completed)
+                        currentReminders.forEach(remId => {
+                            if (!apiReminders.has(remId)) {
+                                // Reminder was removed/completed
+                                const reminderEl = document.querySelector(`[data-reminder-id="${remId}"]`);
+                                if (reminderEl) {
+                                    reminderEl.classList.add('removing');
+                                    setTimeout(() => {
+                                        reminderEl.remove();
+                                        
+                                        // Show empty message if no reminders left
+                                        if (document.querySelectorAll('.reminder-item').length === 0) {
+                                            remindersContainer.innerHTML = '<div class="reminders-empty">No pending reminders</div>';
+                                        }
+                                    }, 300);
+                                }
+                            }
+                        });
+                        
+                        // Find new reminders to add
+                        reminders.forEach(reminder => {
+                            if (!currentReminders.has(reminder.Rid)) {
+                                // New reminder
+                                const reminderEl = document.createElement('div');
+                                reminderEl.className = 'reminder-item';
+                                reminderEl.setAttribute('data-reminder-id', reminder.Rid);
+                                reminderEl.setAttribute('data-destination-id', reminder.Did);
+                                reminderEl.innerHTML = `
+                                    <div class="reminder-destination">${reminder.destination_name}</div>
+                                    <div class="reminder-text">${reminder.rem_text}</div>
+                                `;
+                                
+                                // Remove empty message if it exists
+                                const emptyMsg = remindersContainer.querySelector('.reminders-empty');
+                                if (emptyMsg) {
+                                    emptyMsg.remove();
+                                }
+                                
+                                // Add to the beginning (since flex-direction: column-reverse)
+                                remindersContainer.insertBefore(reminderEl, remindersContainer.firstChild);
+                            }
+                        });
+                    }
+                })
+                .catch(error => console.error('Error updating reminders:', error));
+        }
+
+        // Poll for reminder updates every 2 seconds
+        setInterval(updateReminders, 2000);
+
+        // Also update when the user returns to the tab
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                updateReminders();
+            }
+        });
     </script>
 </body>
 </html>
