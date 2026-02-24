@@ -20,6 +20,17 @@
         .meta {
             color: #6b7280;
         }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+        }
     </style>
 </head>
 
@@ -51,12 +62,18 @@
 
                         {% if logs %}
                         {% for log in logs %}
-                        <div class="p-3 mb-3 bg-light border rounded position-relative">
-                            <small class="text-muted d-block mb-2 border-bottom pb-1">
-                                🕒 {{ log.created_at.strftime('%B %d, %Y at %I:%M %p') }}
-                            </small>
-
-                            <p class="mb-0">{{ log.note_text }}</p>
+                        <div class="p-3 mb-3 bg-light border rounded position-relative" id="log-{{ log.Lid }}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div style="flex: 1;">
+                                    <small class="text-muted d-block mb-2 border-bottom pb-1">
+                                        🕒 {{ log.created_at.strftime('%B %d, %Y at %I:%M %p') }}
+                                    </small>
+                                    <p class="mb-0">{{ log.note_text }}</p>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-danger ms-2" onclick="deleteLog({{ log.Lid }})" title="Delete log">
+                                    🗑️
+                                </button>
+                            </div>
                         </div>
                         {% endfor %}
                         {% else %}
@@ -83,18 +100,23 @@
                     <div class="card-body">
                         {% if reminders %}
                         {% for reminder in reminders %}
-                        <div class="p-3 mb-2 bg-light border rounded d-flex justify-content-between align-items: start reminder-item-{{ reminder.Rid }}"
+                        <div class="p-3 mb-2 bg-light border rounded d-flex justify-content-between align-items-start reminder-item-{{ reminder.Rid }}"
                             id="reminder-{{ reminder.Rid }}">
-                            <div>
+                            <div style="flex: 1;">
                                 <p class="mb-1"><strong>{{ reminder.rem_text }}</strong></p>
                                 <small class="text-muted">Status: <span class="reminder-status-{{ reminder.Rid }}">{{
                                         reminder.status }}</span></small>
                             </div>
-                            <button type="button"
-                                class="btn btn-sm btn-{{ 'success' if reminder.status == 0 else 'warning' }}"
-                                onclick="toggleReminder({{ reminder.Rid }})">
-                                {{ '✓ Done' if reminder.status == 0 else '↻ Reopen' }}
-                            </button>
+                            <div>
+                                <button type="button"
+                                    class="btn btn-sm btn-{{ 'success' if reminder.status == 0 else 'warning' }}"
+                                    onclick="toggleReminder({{ reminder.Rid }})">
+                                    {{ '✓ Done' if reminder.status == 0 else '↻ Reopen' }}
+                                </button>
+                                <button type="button" class="btn btn-sm btn-danger ms-2" onclick="deleteReminder({{ reminder.Rid }})" title="Delete reminder">
+                                    🗑️
+                                </button>
+                            </div>
                         </div>
                         {% endfor %}
                         {% else %}
@@ -220,6 +242,56 @@
                 .catch(error => {
                     console.error('Error:', error);
                     alert('Error toggling reminder. Please try again.');
+                });
+        }
+
+        // Delete log
+        function deleteLog(logId) {
+            if (!confirm('Are you sure you want to delete this log entry? This cannot be undone.')) return;
+            
+            fetch(`/delete_log/${logId}`, {
+                method: 'POST'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const logEl = document.getElementById(`log-${logId}`);
+                        logEl.style.animation = 'fadeOut 0.3s ease-out forwards';
+                        setTimeout(() => {
+                            logEl.remove();
+                        }, 300);
+                    } else {
+                        alert('Error deleting log. Please try again.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error deleting log. Please try again.');
+                });
+        }
+
+        // Delete reminder
+        function deleteReminder(reminderId) {
+            if (!confirm('Are you sure you want to delete this reminder? This cannot be undone.')) return;
+            
+            fetch(`/delete_reminder/${reminderId}`, {
+                method: 'POST'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const reminderEl = document.getElementById(`reminder-${reminderId}`);
+                        reminderEl.style.animation = 'fadeOut 0.3s ease-out forwards';
+                        setTimeout(() => {
+                            reminderEl.remove();
+                        }, 300);
+                    } else {
+                        alert('Error deleting reminder. Please try again.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error deleting reminder. Please try again.');
                 });
         }
     </script>
