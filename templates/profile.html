@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile</title>
+    <link rel="stylesheet" href="{{ url_for('static',filename='css/profile.css')}}">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="navbar-brand">Profile</div>
+        <div class="nav-links">
+            <a href="{{ url_for('dashboard') }}" class="back-btn">← Back to Dashboard</a>
+            <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+        </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="profile-container">
+            <div class="profile-header">
+                <h1 class="profile-title">My Profile</h1>
+                <div class="decorative-line"></div>
+            </div>
+            
+            <!-- Profile Photo Section -->
+            <div class="profile-photo-section">
+                {% if current_user.profile_photo_path %}
+                    <img id="profilePhotoDisplay" src="{{ current_user.profile_photo_path }}" alt="Profile Photo" class="profile-photo-large">
+                {% else %}
+                    <div id="profilePhotoPlaceholder" class="profile-photo-placeholder">📸</div>
+                    <p id="noPhotoText">No profile photo</p>
+                {% endif %}
+                <button id="uploadPhotoBtn" class="upload-photo-btn" onclick="triggerPhotoUpload()">📷 Upload Photo</button>
+                <input type="file" id="photoInput" accept="image/*" onchange="handlePhotoUpload(event)">
+            </div>
+            
+            <!-- Success/Error Messages -->
+            <div id="successMessage" class="success-message">Profile updated successfully!</div>
+            <div id="errorMessage" class="error-message" id="errorMsg"></div>
+            
+            <!-- Form Section -->
+            <form id="profileForm" method="POST" enctype="multipart/form-data" class="form-hidden">
+                <!-- File input for profile photo -->
+                <input type="file" id="photoFormInput" name="profile_photo" accept="image/*" class="form-hidden">
+            </form>
+            
+            <div class="form-section">
+                <!-- Name Field -->
+                <div class="form-group">
+                    <label for="name">Full Name:</label>
+                    <input type="text" id="name" value="{{ current_user.Name }}" disabled>
+                    <input type="text" id="nameEdit" placeholder="Enter your full name">
+                </div>
+                
+                <!-- Age Field -->
+                <div class="form-group">
+                    <label for="age">Age:</label>
+                    <input type="number" id="age" value="{{ current_user.age or '' }}" disabled>
+                    <input type="number" id="ageEdit" placeholder="Enter your age" min="1" max="120">
+                </div>
+                
+                <!-- Sex Dropdown -->
+                <div class="form-group">
+                    <label for="sex">Sex:</label>
+                    <select id="sex" disabled>
+                        <option value="Not Specified" {% if current_user.sex == 'Not Specified' %}selected{% endif %}>Not Specified</option>
+                        <option value="Male" {% if current_user.sex == 'Male' %}selected{% endif %}>Male</option>
+                        <option value="Female" {% if current_user.sex == 'Female' %}selected{% endif %}>Female</option>
+                        <option value="Other" {% if current_user.sex == 'Other' %}selected{% endif %}>Other</option>
+                    </select>
+                    <select id="sexEdit">
+                        <option value="Not Specified">Not Specified</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                
+                <!-- Email Field -->
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <div class="field-display">{{ current_user.Email_ID }}</div>
+                </div>
+                
+                <!-- Username Field -->
+                <div class="form-group">
+                    <label for="username">Username:</label>
+                    <div class="field-display">{{ current_user.User_name }}</div>
+                </div>
+            </div>
+            
+            <!-- Button Group -->
+            <div class="button-group">
+                <button type="button" id="editBtn" class="edit-btn" onclick="enableEdit()">✏️ Edit Profile</button>
+                <button type="button" id="saveBtn" class="save-btn" onclick="saveProfile()">💾 Save Changes</button>
+                <button type="button" id="cancelBtn" class="cancel-btn" onclick="cancelEdit()">❌ Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="{{url_for('static',filename='js/profile.js')}}"></script>
+</body>
+</html>

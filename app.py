@@ -5,10 +5,19 @@ from werkzeug.security import check_password_hash,generate_password_hash
 from datetime import datetime,UTC
 from sqlalchemy import or_
 from flask_login import LoginManager,login_user,logout_user,login_required,current_user,UserMixin
-
+from werkzeug.utils import secure_filename
 
 app=Flask(__name__)
 app.secret_key="tja"
+
+UPLOAD_FOLDER=os.path.join('static','UPLOADS')
+app.config['UPLOAD_FOLDER']=UPLOAD_FOLDER
+os.makedirs(UPLOAD_FOLDER,exist_ok=True)
+
+allowed_extensions={'jpg','jpeg','png','gif'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.',1)[1].lower() in allowed_extensions
 
 app.config['SQLALCHEMY_DATABASE_URI']=os.environ.get('DATABASE_URL') or 'mysql+pymysql://root:1246@localhost/tjp'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS']=False
@@ -23,6 +32,8 @@ class User(UserMixin,db.Model):
     Email_ID=db.Column(db.String(100),unique=True,nullable=False)
     password_hash=db.Column(db.String(255),nullable=False)
     age=db.Column(db.Integer)
+    sex=db.Column(db.String(10),default='Not Specified')
+    profile_photo_path=db.Column(db.String(255),nullable=True)
     created_at=db.Column(db.DateTime,default=datetime.utcnow)
     def get_id(self):
         return str(self.User_ID)
@@ -317,7 +328,16 @@ def travel_log(Did):
 
     try:
         note=request.form.get('note')
-        photo_path=request.form.get('photo_path')
+        photo_path=None
+        if 'log_photo' in request.files:
+            file=request.files['log_photo']
+            if file and file.filename != '' and allowed_file(file.filename):
+                ext=file.filename.rsplit('.',1)[1].lower()
+                date_str=datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+                new_filename=f"log_dest{Did}_{date_str}.{ext}"
+                save_path=os.path.join(app.config['UPLOAD_FOLDER'],new_filename)
+                file.save(save_path)
+                photo_path=f"static/UPLOADS/{new_filename}"
         new_log=TRAVEL_LOG(Did=Did,note_text=note,photo_path=photo_path)
         db.session.add(new_log)
         db.session.commit()
@@ -406,9 +426,18 @@ def delete_log(Lid):
         return jsonify(success=False, message="Access denied"), 403
         
     try:
+        if target_log.photo_path:
+            file_path=os.path.join(app.root_path,target_log.photo_path)
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                except Exception as file_error:
+                    print(f"Could not delete physical file: {file_error}")
+
+
         db.session.delete(target_log)
         db.session.commit()
-        return jsonify(success=True, message="Log deleted successfully")
+        return jsonify(success=True, message="Log and photo deleted successfully")
     except Exception as e:
         db.session.rollback()
         return jsonify(success=False, message="Database error"), 500
@@ -515,5 +544,94 @@ def delete_expense(Eid):
         db.session.rollback()
         return jsonify(success=False, message="Database error"), 500
 
+# --- PROFILE PAGE ---
+@app.route('/profile')
+@login_required
+def profile():
+    return render_template('profile.html')
+
+# --- UPLOAD PROFILE PHOTO ---
+@app.route('/upload_profile_photo', methods=['POST'])
+@login_required
+def upload_profile_photo():
+    try:
+        if 'profile_photo' not in request.files:
+            return jsonify(success=False, error='No file provided')
+        
+        file = request.files['profile_photo']
+        
+        if file.filename == '':
+            return jsonify(success=False, error='No file selected')
+        
+        if not allowed_file(file.filename):
+            return jsonify(success=False, error='Invalid file type. Allowed: JPG, PNG, GIF')
+        
+        # Delete old profile photo if exists
+        if current_user.profile_photo_path:
+            old_path = os.path.join(app.root_path, current_user.profile_photo_path)
+            if os.path.exists(old_path):
+                try:
+                    os.remove(old_path)
+                except:
+                    pass
+        
+        # Generate new filename
+        ext = file.filename.rsplit('.', 1)[1].lower()
+        date_str = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+        new_filename = f"{current_user.User_ID}_{date_str}.{ext}"
+        
+        # Save file
+        save_path = os.path.join(app.config['UPLOAD_FOLDER'], new_filename)
+        file.save(save_path)
+        
+        # Update database
+        photo_path = f"static/UPLOADS/{new_filename}"
+        current_user.profile_photo_path = photo_path
+        db.session.commit()
+        
+        return jsonify(success=True, photo_path=photo_path)
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(success=False, error=str(e)), 500
+
+# --- UPDATE PROFILE ---
+@app.route('/update_profile', methods=['POST'])
+@login_required
+def update_profile():
+    try:
+        data = request.get_json()
+        
+        # Update name
+        if 'name' in data and data['name'].strip():
+            current_user.Name = data['name'].strip()
+        
+        # Update age
+        if 'age' in data and data['age']:
+            age = int(data['age'])
+            if 1 <= age <= 120:
+                current_user.age = age
+            else:
+                return jsonify(success=False, error='Invalid age. Must be between 1 and 120')
+        else:
+            current_user.age = None
+        
+        # Update sex
+        if 'sex' in data:
+            valid_sex_values = ['Not Specified', 'Male', 'Female', 'Other']
+            if data['sex'] in valid_sex_values:
+                current_user.sex = data['sex']
+            else:
+                current_user.sex = 'Not Specified'
+        
+        db.session.commit()
+        return jsonify(success=True, message='Profile updated successfully')
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(success=False, error=str(e)), 500
+    
+
+    
 if __name__=="__main__":
     app.run(debug=True)
