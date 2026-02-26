@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TJP - Travel Journey Planner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+
+    <nav class="navbar">
+        <div class="nav-brand">TJP</div>
+        <div class="nav-links">
+            <a href="{{ url_for('login') }}" class="btn btn-outline">Login</a>
+            <a href="{{ url_for('signup') }}" class="btn btn-filled">Sign Up</a>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <h1>Plan Smarter. Travel Better.</h1>
+            <p>Organize your journeys, track destinations, manage expenses, and preserve memories — all in one place.
+            </p>
+            <a href="{{ url_for('login') }}" class="btn btn-gradient btn-large">Get Started</a>
+        </div>
+    </header>
+
+    <section class="features">
+        <div class="feature-card">
+            <div class="icon-wrapper">
+                <i class="fa-solid fa-map-location-dot"></i>
+            </div>
+            <h3>Plan Destinations</h3>
+            <p>Map out your entire itinerary, reorder stops, and track your visiting status effortlessly.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="icon-wrapper">
+                <i class="fa-solid fa-wallet"></i>
+            </div>
+            <h3>Track Budget & Expenses</h3>
+            <p>Set trip budgets, log daily expenses, and ensure you never overspend on your adventures.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="icon-wrapper">
+                <i class="fa-solid fa-book-journal-whills"></i>
+            </div>
+            <h3>Save Travel Memories</h3>
+            <p>Upload photos and write personalized diary entries for every place you visit.</p>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="footer-container">
+            
+            <div class="footer-brand">
+                <h2>TJP</h2>
+                <p>Plan smarter journeys. Track memories. Travel with clarity.</p>
+            </div>
+
+            <div class="footer-social">
+                <h4>Connect with the Developer</h4>
+                <div class="social-icons">
+                    <a href="sankarkrishnap124@gmail.com" title="Email Me"><i class="fa-solid fa-envelope"></i></a>
+                    <a href="https://linkedin.com/in/yourprofile" target="_blank" title="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
+                    <a href="https://instagram.com/yourprofile" target="_blank" title="Instagram"><i class="fa-brands fa-instagram"></i></a>
+                    <a href="https://github.com/SANKAR-124" target="_blank" title="GitHub"><i class="fa-brands fa-github"></i></a>
+                </div>
+            </div>
+
+        </div>
+        
+        <div class="footer-bottom">
+            <p>&copy; 2026 TJP. All rights reserved.</p>
+            <p>Designed & Built by Sankar 😌</p>
+        </div>
+    </footer>
+
+</body>
+
+</html>

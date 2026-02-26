@@ -100,7 +100,10 @@ def load_user(User_ID):
 
 @app.route('/')
 def home():
-    return jsonify(message="hello")
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    else:
+        return render_template('index.html')
 
 @app.route('/signup',methods=['GET','POST'])
 def signup():

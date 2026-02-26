@@ -1,45 +1,81 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
-    <link rel="stylesheet" href="{{url_for('static',filename='css/login.css')}}">
+    <title>Log In - TJP</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
+
 <body>
-    <div class="container">
-        <h1>Login</h1>
-        
-        <!-- Flash Messages -->
-        {% with messages = get_flashed_messages(category_filter=["fail"]) %}
-            {% if messages %}
+
+    <div class="split-layout">
+
+        <div class="split-left">
+            <div class="overlay"></div>
+            <div class="left-content">
+                <a href="{{ url_for('home') }}" class="brand-logo">TJP</a>
+
+                <div class="marketing-text">
+                    <h1>Welcome Back to TJP</h1>
+                    <p class="subtext">Your next great adventure is waiting. Log in to access your itineraries, budgets,
+                        and travel memories.</p>
+
+                    <ul class="benefit-bullets">
+                        <li><i class="fa-solid fa-map-location-dot"></i> Access your saved journeys</li>
+                        <li><i class="fa-solid fa-wallet"></i> Check your travel budgets</li>
+                        <li><i class="fa-solid fa-book-journal-whills"></i> Relive your memories</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="split-right">
+
+            <div class="auth-nav">
+                <span>Don't have an account?</span>
+                <a href="{{ url_for('signup') }}" class="btn-text">Sign Up</a>
+            </div>
+
+            <div class="form-wrapper fade-in">
+                <div class="form-header">
+                    <h2>Log In</h2>
+                    <p>Welcome back! Please enter your details.</p>
+                </div>
+
+                {% with messages = get_flashed_messages(category_filter=["fail"]) %}
+                {% if messages %}
                 <div class="flash-messages">
                     {% for message in messages %}
-                        <div class="alert alert-fail">
-                            {{ message }}
-                        </div>
+                    <div class="alert alert-danger">
+                        {{ message }}
+                    </div>
                     {% endfor %}
                 </div>
-            {% endif %}
-        {% endwith %}
-        
-        <form method="POST" action="/login">
-            <div class="form-group">
-                <label for="username">Username or Email</label>
-                <input type="text" id="username" name="login_id" placeholder="Enter your username or email" required>
+                {% endif %}
+                {% endwith %}
+
+                <form method="POST" action="/login" class="auth-form">
+                    <div class="form-group">
+                        <label for="username">Username or Email</label>
+                        <input type="text" id="username" name="login_id" placeholder="johndoe / john@example.com"
+                            required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" placeholder="password" required>
+                    </div>
+
+                    <button type="submit" class="btn-submit">Log In</button>
+                </form>
             </div>
-            
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            
-            <button type="submit">Login</button>
-        </form>
-        
-        <div class="form-footer">
-            Don't have an account? <a href="/signup">Sign up here</a>
+
         </div>
     </div>
+
 </body>
+
 </html>

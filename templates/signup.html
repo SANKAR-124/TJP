@@ -1,56 +1,96 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up</title>
-    <link rel="stylesheet" href="{{url_for('static',filename='css/signup.css')}}">
+    <title>Sign Up - TJP</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
+
 <body>
-    <div class="container">
-        <h1>Sign Up</h1>
-        
-        <!-- Flash Messages -->
-        {% with messages = get_flashed_messages(category_filter=["error"]) %}
-            {% if messages %}
+
+    <div class="split-layout">
+
+        <div class="split-left">
+            <div class="overlay"></div>
+            <div class="left-content">
+                <a href="{{ url_for('home') }}" class="brand-logo">TJP</a>
+
+                <div class="marketing-text">
+                    <h1>Start Planning Your Next Journey Today</h1>
+                    <p class="subtext">Track destinations, manage expenses, and preserve your travel memories — all in
+                        one organized platform.</p>
+
+                    <ul class="benefit-bullets">
+                        <li><i class="fa-solid fa-circle-check"></i> Organize every stop</li>
+                        <li><i class="fa-solid fa-circle-check"></i> Track your budget in real time</li>
+                        <li><i class="fa-solid fa-circle-check"></i> Never forget important reminders</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="split-right">
+
+            <div class="auth-nav">
+                <span>Already have an account?</span>
+                <a href="{{ url_for('login') }}" class="btn-text">Log In</a>
+            </div>
+
+            <div class="form-wrapper fade-in">
+                <div class="form-header">
+                    <h2>Create an Account</h2>
+                    <p>Get started with TJP for free.</p>
+                </div>
+
+                {% with messages = get_flashed_messages(category_filter=["error"]) %}
+                {% if messages %}
                 <div class="flash-messages">
                     {% for message in messages %}
-                        <div class="alert alert-danger">
-                            {{ message }}
-                        </div>
+                    <div class="alert alert-danger">
+                        {{ message }}
+                    </div>
                     {% endfor %}
                 </div>
-            {% endif %}
-        {% endwith %}
-        
-        <form method="post" action="/signup">
-            <div class="form-group">
-                <label for="name">Full Name</label>
-                <input type="text" id="name" name="name" required>
+                {% endif %}
+                {% endwith %}
+
+                <form method="POST" action="/signup" class="auth-form">
+                    <div class="form-group">
+                        <label for="name">Full Name</label>
+                        <input type="text" id="name" name="name" required placeholder="John Doe">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" required placeholder="johndoe123">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <input type="email" id="email" name="email" required placeholder="john@example.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="age">Age</label>
+                        <input type="number" id="age" name="age" required placeholder="25" min="1" max="120">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required placeholder="password">
+                    </div>
+
+                    <button type="submit" class="btn-submit">Sign Up</button>
+                    <p class="micro-copy">Free to use. No hidden costs.</p>
+                </form>
             </div>
-            
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="age">Age</label>
-                <input type="number" id="age" name="age" required>
-            </div>
-            
-            <button type="submit">Sign Up</button>
-        </form>
+
+        </div>
     </div>
+
 </body>
+
 </html>
