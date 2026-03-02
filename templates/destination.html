@@ -4,178 +4,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ destination.place_name }} Workspace</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>{{ DESTINATION.place_name }} - Destination Details</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{url_for('static',filename='css/destination.css')}}">
 </head>
 
-<body class="bg-light">
-
-    <nav class="navbar navbar-light bg-white shadow-sm">
-        <div class="container">
-            <a href="/journey/{{ destination.Jid }}" class="btn btn-link text-decoration-none">&larr; Back to
-                Journey</a>
-            <span class="navbar-brand mb-0 h1">Workspace</span>
-            <div></div>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-left">
+                <a href="/journey/{{ DESTINATION.Jid }}" class="btn-back"><i class="fa-solid fa-arrow-left"></i> Back to
+                    Journey</a>
+            </div>
+            <div class="nav-center">
+                <h1 class="nav-title">{{ DESTINATION.place_name }} Exploration</h1>
+            </div>
+            <div class="nav-right">
+            </div>
         </div>
     </nav>
 
-    <main class="container my-4">
-        <div class="row g-4">
+    <div class="expanded-wrapper">
 
-            <div class="col-12 col-md-8">
-
-                <div class="hero-placeholder shadow-sm mb-4">
-                    <h1 class="display-4 fw-bold">{{ destination.place_name }}</h1>
+        <div class="top-section">
+            <div class="glass-card overview-card">
+                <div class="overview-header">
+                    <h2>{{ DESTINATION.place_name }}</h2>
+                    <div class="badges-row">
+                        <span class="badge status-{{ DESTINATION.visit_status }}">{{ DESTINATION.visit_status |
+                            capitalize }}</span>
+                        {% if DESTINATION.is_main %}
+                        <span class="badge badge-main">Main Destination</span>
+                        {% endif %}
+                        <span class="badge badge-order">Visit Order #{{ DESTINATION.visit_order }}</span>
+                    </div>
                 </div>
 
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-white">
-                        <h3 class="h5 mb-0 py-2">📖 Travel Logs</h3>
-                    </div>
-                    <div class="card-body">
+                <div class="map-embed-container">
+                    <iframe title="Google Maps Location" src="https://maps.google.com/maps?q={{ DESTINATION.place_name | urlencode }}&output=embed"
+                        width="100%" height="250" style="border:0;" allowfullscreen="" loading="lazy">
+                    </iframe>
+                </div>
+            </div>
+        </div>
 
+        <div class="main-grid">
+
+            <div class="left-col">
+                <div class="glass-card logs-card">
+                    <h3 class="section-title">Travel Logs Section</h3>
+
+                    <div class="logs-scroll-container">
                         {% if logs %}
                         {% for log in logs %}
-                        <div class="p-3 mb-3 bg-light border rounded position-relative" id="log-{{ log.Lid }}">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div style="flex: 1;">
-
-                                    <small class="text-muted d-block mb-2 border-bottom pb-1">
-                                        🕒 {{ log.created_at.strftime('%B %d, %Y at %I:%M %p') }}
-                                    </small>
-
-                                    {% if log.photo_path %}
-                                    <div class="mb-3 bg-white rounded p-2 border text-center">
-                                        <img src="/{{ log.photo_path }}" class="img-fluid rounded shadow-sm"
-                                            style="max-height: 350px; object-fit: cover;" alt="Travel Memory">
-                                    </div>
-                                    {% endif %}
-
-                                    <p class="mb-0">{{ log.note_text }}</p>
-
-                                </div>
-
-                                <button type="button" class="btn btn-sm btn-danger ms-2"
-                                    onclick="deleteLog({{ log.Lid }})" title="Delete log">
-                                    🗑️
-                                </button>
-
+                        <div class="log-entry" id="log-{{ log.Lid }}">
+                            <div class="log-meta">
+                                <i class="fa-regular fa-clock"></i> {{ log.created_at.strftime('%I:%M %p, %b %d') }}
                             </div>
+                            <p class="log-text">{{ log.note_text }}</p>
+
+                            {% if log.photos %}
+                            <div class="log-photos">
+                                {% for photo in log.photos[:3] %}
+                                <img src="{{ url_for('static', filename=photo) }}" alt="Travel Memory"
+                                    class="photo-thumbnail"
+                                    onclick='openGalleryModal({{ log.photos | tojson }}, {{ loop.index0 }})'>
+                                {% endfor %}
+
+                                {% if log.photos|length > 3 %}
+                                <div class="more-photos-badge" onclick='openGalleryModal({{ log.photos | tojson }}, 3)'>
+                                    <span>+{{ log.photos|length - 3 }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+
+                            <button type="button" class="btn-delete-log" onclick="deleteLog({{ log.Lid }})"
+                                title="Delete Memory"><i class="fa-solid fa-trash-can"></i></button>
                         </div>
                         {% endfor %}
                         {% else %}
-                        <p class="text-muted">No logs yet. Write your first memory!</p>
-                        {% endif %}
-
-                        <hr>
-
-                        <form id="logForm">
-                            <div class="mb-3">
-                                <label class="form-label">New Log Entry</label>
-                                <textarea class="form-control" name="note" rows="3" required
-                                    placeholder="What did you do here?"></textarea>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label text-muted small">Attach a Photo (Optional)</label>
-                                <input class="form-control" type="file" name="log_photo" accept="image/*">
-                            </div>
-
-                            <button type="submit" class="btn btn-primary">Save Log</button>
-                        </form>
-
-                        <div class="card shadow-sm">
-                            <div class="card-header bg-white">
-                                <h3 class="h5 mb-0 py-2">⏰ Reminders & Tasks</h3>
-                            </div>
-                            <div class="card-body">
-                                {% if reminders %}
-                                {% for reminder in reminders %}
-                                <div class="p-3 mb-2 bg-light border rounded d-flex justify-content-between align-items-start reminder-item-{{ reminder.Rid }}"
-                                    id="reminder-{{ reminder.Rid }}">
-                                    <div style="flex: 1;">
-                                        <p class="mb-1"><strong>{{ reminder.rem_text }}</strong></p>
-                                        <small class="text-muted">Status: <span
-                                                class="reminder-status-{{ reminder.Rid }}">{{
-                                                reminder.status }}</span></small>
-                                    </div>
-                                    <div>
-                                        <button type="button"
-                                            class="btn btn-sm btn-{{ 'success' if reminder.status == 0 else 'warning' }}"
-                                            onclick="toggleReminder({{ reminder.Rid }})">
-                                            {{ '✓ Done' if reminder.status == 0 else '↻ Reopen' }}
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-danger ms-2"
-                                            onclick="deleteReminder({{ reminder.Rid }})" title="Delete reminder">
-                                            🗑️
-                                        </button>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                                {% else %}
-                                <p class="text-muted">No reminders yet. Add one below!</p>
-                                {% endif %}
-
-                                <hr>
-
-                                <form id="reminderForm">
-                                    <div class="mb-3">
-                                        <label class="form-label">New Reminder</label>
-                                        <textarea class="form-control" name="rem_text" rows="2" required
-                                            placeholder="What do you need to remember?"></textarea>
-                                    </div>
-                                    <input type="hidden" name="status" value="0">
-                                    <button type="submit" class="btn btn-primary">Add Reminder</button>
-                                </form>
-                            </div>
+                        <div class="empty-state-box">
+                            <i class="fa-regular fa-images"></i>
+                            <p>Start documenting your experience here. Write a memory or attach a photo!</p>
                         </div>
-
+                        {% endif %}
                     </div>
 
-                    <aside class="col-12 col-md-4">
-                        <div class="card shadow-sm mb-4">
-                            <div class="card-body">
-                                <h5 class="card-title">Destination Info</h5>
-                                <ul class="list-unstyled mb-0 mt-3">
-                                    <li class="mb-2"><strong>Status:</strong> <span class="badge bg-primary">{{
-                                            destination.visit_status }}</span></li>
-                                    <li class="mb-2"><strong>Visit Order:</strong> #{{ destination.visit_order }}</li>
-                                    <li class="mb-2"><strong>Main Destination:</strong> {% if destination.is_main
-                                        %}Yes{% else
-                                        %}No{% endif %}</li>
-                                </ul>
+                    <div class="log-input-area">
+                        <form id="logForm" enctype="multipart/form-data">
+                            <textarea name="note" class="premium-textarea" placeholder="What did you experience here?"
+                                required></textarea>
+                            <div class="input-actions">
+                                <div class="file-upload-wrapper">
+                                    <input type="file" name="log_photos" id="log_photo" accept="image/*"
+                                        class="hidden-file" multiple>
+                                    <label for="log_photo" class="btn-attach">
+                                        <i class="fa-solid fa-camera"></i> <span id="fileName">Attach Photo(s)</span>
+                                    </label>
+                                </div>
+                                <button type="submit" class="btn-primary">Save Memory</button>
                             </div>
-                        </div>
-
-                        <div class="card shadow-sm mb-4">
-                            <div class="card-header bg-white">
-                                <h5 class="card-title mb-0 py-1">📍 Map</h5>
-                            </div>
-                            <div class="card-body p-0">
-                                <iframe width="100%" height="300" style="border:0; border-radius: 0 0 0.25rem 0.25rem;"
-                                    loading="lazy" allowfullscreen
-                                    src="https://maps.google.com/maps?q={{ destination.place_name | urlencode }}&output=embed">
-                                </iframe>
-                            </div>
-
-                            {% if destination.map %}
-                            <div class="card-footer bg-white text-center">
-                                <a href="{{ destination.map }}" target="_blank"
-                                    class="btn btn-sm btn-outline-primary w-100">
-                                    ↗️ Open in Google Maps App
-                                </a>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </aside>
-
+                        </form>
+                    </div>
                 </div>
-    </main>
+            </div>
+            <div class="right-col">
+                <div class="glass-card reminders-card sticky-element">
+                    <h3 class="section-title">Reminders & Tasks Card</h3>
 
-    <div id="destination-data" data-did="{{ destination.Did }}" style="display: none;"></div>
+                    <div class="reminders-scroll">
+                        {% if reminders %}
+                        {% for reminder in reminders %}
+                        <div class="reminder-item" id="reminder-{{ reminder.Rid }}">
+                            <label class="checkbox-wrapper">
+                                <input type="checkbox" {% if reminder.status==1 %}checked{% endif %}
+                                    onclick="toggleReminder({{ reminder.Rid }}, this.checked)">
+                                <span class="checkmark"></span>
+                                <span class="rem-text {% if reminder.status == 1 %}completed{% endif %}">{{
+                                    reminder.rem_text }}</span>
+                            </label>
+                            <button type="button" class="btn-delete-rem" title="Delete Reminder" onclick="deleteReminder({{ reminder.Rid }})"><i
+                                    class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <div class="empty-state-box text-center">
+                            <img src="{{ url_for('static', filename='UPLOADS/map_icon.png') }}" alt="No tasks"
+                                style="width: 50px; opacity: 0.5; margin-bottom: 10px;"
+                                onerror="this.style.display='none'">
+                            <p>No tasks added yet.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <form id="reminderForm" class="reminder-input-area">
+                        <input type="text" name="rem_text" class="premium-input"
+                            placeholder="Add a task for this destination..." required>
+                        <input type="hidden" name="status" value="0">
+                        <button type="submit" class="btn-primary mt-2 w-100">Add Task</button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="photoModal" class="modal">
+        <span class="close-modal" onclick="closePhotoModal()"><i class="fa-solid fa-xmark"></i></span>
+
+        <div class="gallery-container">
+            <button class="gallery-btn prev-btn" id="prevBtn" title="Previous Photo" onclick="prevImage(event)"><i
+                    class="fa-solid fa-chevron-left"></i></button>
+
+            <img class="modal-content" id="expandedPhoto" alt="Expanded Photo">
+
+            <button class="gallery-btn next-btn" id="nextBtn" title="Next Photo" onclick="nextImage(event)"><i
+                    class="fa-solid fa-chevron-right"></i></button>
+        </div>
+
+        <div id="galleryCounter" class="gallery-counter">1 / 1</div>
+    </div>
+
+    <div id="destination-data" data-did="{{ DESTINATION.Did }}" style="display: none;"></div>
     <script src="{{url_for('static',filename='js/destination.js')}}"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>

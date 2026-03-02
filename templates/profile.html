@@ -1,105 +1,148 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profile</title>
-    <link rel="stylesheet" href="{{ url_for('static',filename='css/profile.css')}}">
+    <title>Profile - TrekFolio</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
 </head>
+
 <body>
-    <!-- Navbar -->
     <nav class="navbar">
-        <div class="navbar-brand">Profile</div>
-        <div class="nav-links">
-            <a href="{{ url_for('dashboard') }}" class="back-btn">← Back to Dashboard</a>
-            <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+        <div class="nav-container">
+            <div class="nav-left">
+                <a href="{{ url_for('dashboard') }}" class="nav-brand">TrekFolio</a>
+                <!-- <a href="{{ url_for('dashboard') }}" class="nav-link"><i class="fa-solid fa-house"></i> Dashboard</a> -->
+            </div>
+            <div class="nav-center">
+                <span class="page-title"><i class="fa-regular fa-compass"></i> Profile</span>
+            </div>
+            <div class="nav-right">
+                <a href="{{ url_for('logout') }}" class="btn-logout"><i
+                        class="fa-solid fa-arrow-right-from-bracket"></i> Logout</a>
+            </div>
         </div>
     </nav>
-    
-    <!-- Main Content -->
-    <div class="main-content">
-        <div class="profile-container">
-            <div class="profile-header">
-                <h1 class="profile-title">My Profile</h1>
-                <div class="decorative-line"></div>
+
+    <div class="page-wrapper">
+        <div class="pattern-overlay"></div>
+
+        <div class="floating-vehicles">
+            <i class="fa-solid fa-plane vehicle v-plane-1"></i>
+            <i class="fa-solid fa-car-side vehicle v-car-1"></i>
+            <i class="fa-solid fa-motorcycle vehicle v-bike-1"></i>
+            <i class="fa-solid fa-sailboat vehicle v-ship-1"></i>
+            <i class="fa-solid fa-plane vehicle v-plane-2"></i>
+        </div>
+
+        <div id="toastNotification" class="toast"></div>
+
+        <div class="profile-card">
+
+            <div class="profile-identity">
+                <div class="photo-wrapper" onclick="openPhotoModal()">
+                    {% if current_user.profile_photo_path %}
+                    <img id="profilePhotoDisplay"
+                        src="{{ url_for('static', filename=current_user.profile_photo_path.replace('static/', '')) }}"
+                        alt="Profile Photo" class="profile-photo">
+                    {% else %}
+                    <div id="profilePhotoPlaceholder" class="profile-photo-placeholder">
+                        <span>{{ current_user.Name[0] | upper }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="upload-btn-container">
+                    <button class="btn-change-photo" title="Change Profile Photo" onclick="triggerPhotoUpload()">
+                        <i class="fa-solid fa-camera"></i>
+                    </button>
+                    <input type="file" id="photoInput" title="Upload Photo" accept="image/*" class="hidden-input"
+                        onchange="handlePhotoUpload(event)">
+                </div>
+
+                <h1 class="display-name" id="displayName">{{ current_user.Name }}</h1>
+                <p class="username">@{{ current_user.User_name }}</p>
+                <p class="join-date">
+                    <i class="fa-regular fa-calendar"></i> Member since
+                    {% if current_user.created_at %}
+                    {{ current_user.created_at.strftime('%B %Y') }}
+                    {% else %}
+                    2026
+                    {% endif %}
+                </p>
             </div>
-            
-            <!-- Profile Photo Section -->
-            <div class="profile-photo-section">
-                {% if current_user.profile_photo_path %}
-                    <img id="profilePhotoDisplay" src="{{ current_user.profile_photo_path }}" alt="Profile Photo" class="profile-photo-large">
-                {% else %}
-                    <div id="profilePhotoPlaceholder" class="profile-photo-placeholder">📸</div>
-                    <p id="noPhotoText">No profile photo</p>
-                {% endif %}
-                <button id="uploadPhotoBtn" class="upload-photo-btn" onclick="triggerPhotoUpload()">📷 Upload Photo</button>
-                <input type="file" id="photoInput" accept="image/*" onchange="handlePhotoUpload(event)">
+
+            <hr class="subtle-divider">
+
+            <div class="account-info">
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Username</label>
+                        <input type="text" title="Username" value="{{ current_user.User_name }}" class="input-readonly" readonly
+                            disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" title="Email Address" value="{{ current_user.Email_ID }}" class="input-readonly" readonly
+                            disabled>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="nameEdit">Full Name</label>
+                    <input type="text" id="nameEdit" class="input-editable" value="{{ current_user.Name }}" disabled>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="ageEdit">Age</label>
+                        <input type="number" id="ageEdit" class="input-editable" value="{{ current_user.age or '' }}"
+                            placeholder="Enter age" min="1" max="120" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label for="sexEdit">Sex</label>
+                        <select id="sexEdit" class="input-editable" disabled>
+                            <option value="Not Specified" {% if current_user.sex=='Not Specified' %}selected{% endif %}>
+                                Not Specified</option>
+                            <option value="Male" {% if current_user.sex=='Male' %}selected{% endif %}>Male</option>
+                            <option value="Female" {% if current_user.sex=='Female' %}selected{% endif %}>Female
+                            </option>
+                            <option value="Other" {% if current_user.sex=='Other' %}selected{% endif %}>Other</option>
+                        </select>
+                    </div>
+                </div>
+
             </div>
-            
-            <!-- Success/Error Messages -->
-            <div id="successMessage" class="success-message">Profile updated successfully!</div>
-            <div id="errorMessage" class="error-message" id="errorMsg"></div>
-            
-            <!-- Form Section -->
-            <form id="profileForm" method="POST" enctype="multipart/form-data" class="form-hidden">
-                <!-- File input for profile photo -->
-                <input type="file" id="photoFormInput" name="profile_photo" accept="image/*" class="form-hidden">
-            </form>
-            
-            <div class="form-section">
-                <!-- Name Field -->
-                <div class="form-group">
-                    <label for="name">Full Name:</label>
-                    <input type="text" id="name" value="{{ current_user.Name }}" disabled>
-                    <input type="text" id="nameEdit" placeholder="Enter your full name">
-                </div>
-                
-                <!-- Age Field -->
-                <div class="form-group">
-                    <label for="age">Age:</label>
-                    <input type="number" id="age" value="{{ current_user.age or '' }}" disabled>
-                    <input type="number" id="ageEdit" placeholder="Enter your age" min="1" max="120">
-                </div>
-                
-                <!-- Sex Dropdown -->
-                <div class="form-group">
-                    <label for="sex">Sex:</label>
-                    <select id="sex" disabled>
-                        <option value="Not Specified" {% if current_user.sex == 'Not Specified' %}selected{% endif %}>Not Specified</option>
-                        <option value="Male" {% if current_user.sex == 'Male' %}selected{% endif %}>Male</option>
-                        <option value="Female" {% if current_user.sex == 'Female' %}selected{% endif %}>Female</option>
-                        <option value="Other" {% if current_user.sex == 'Other' %}selected{% endif %}>Other</option>
-                    </select>
-                    <select id="sexEdit">
-                        <option value="Not Specified">Not Specified</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-                
-                <!-- Email Field -->
-                <div class="form-group">
-                    <label for="email">Email:</label>
-                    <div class="field-display">{{ current_user.Email_ID }}</div>
-                </div>
-                
-                <!-- Username Field -->
-                <div class="form-group">
-                    <label for="username">Username:</label>
-                    <div class="field-display">{{ current_user.User_name }}</div>
+
+            <div class="card-actions">
+                <button type="button" id="editBtn" class="btn-gradient-full" onclick="enableEdit()">Edit
+                    Profile</button>
+                <div id="saveCancelGroup" class="hidden-group">
+                    <button type="button" class="btn-cancel" onclick="cancelEdit()">Cancel</button>
+                    <button type="button" class="btn-gradient-full" onclick="saveProfile()">Save Changes</button>
                 </div>
             </div>
-            
-            <!-- Button Group -->
-            <div class="button-group">
-                <button type="button" id="editBtn" class="edit-btn" onclick="enableEdit()">✏️ Edit Profile</button>
-                <button type="button" id="saveBtn" class="save-btn" onclick="saveProfile()">💾 Save Changes</button>
-                <button type="button" id="cancelBtn" class="cancel-btn" onclick="cancelEdit()">❌ Cancel</button>
-            </div>
+
+        </div>
+
+        <div class="wave-bottom">
+            <svg viewBox="0 0 1440 320" preserveAspectRatio="none">
+                <path fill="rgba(255,255,255,0.6)" fill-opacity="1"
+                    d="M0,160L48,176C96,192,192,224,288,229.3C384,235,480,213,576,186.7C672,160,768,128,864,133.3C960,139,1056,181,1152,192C1248,203,1344,181,1392,170.7L1440,160L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z">
+                </path>
+            </svg>
         </div>
     </div>
-    
-    <script src="{{url_for('static',filename='js/profile.js')}}"></script>
+
+    <div id="photoModal" class="modal">
+        <span class="close-modal" onclick="closePhotoModal()"><i class="fa-solid fa-xmark"></i></span>
+        <img class="modal-content" id="expandedPhoto" alt="Expanded Photo">
+    </div>
+
+    <script src="{{ url_for('static', filename='js/profile.js') }}"></script>
 </body>
+
 </html>

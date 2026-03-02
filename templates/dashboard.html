@@ -3,73 +3,158 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
-    <link rel="stylesheet" href="{{url_for('static',filename='css/dashboard.css')}}">
+    <title>Dashboard - TrekFolio</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <!-- Navbar -->
+
     <nav class="navbar">
-        <div class="navbar-brand">Dashboard</div>
-        <div class="nav-flex">
-            <a href="{{ url_for('profile') }}" class="profile-btn" title="View Profile">
-                {% if current_user.profile_photo_path %}
-                    <img src="{{ current_user.profile_photo_path }}" alt="Profile" class="profile-photo">
-                {% else %}
-                    <div class="profile-photo-placeholder">
-                        <span>👤</span>
+        <div class="nav-container">
+            <a href="{{ url_for('dashboard') }}" class="nav-brand">TrekFolio</a>
+            
+            <div class="nav-actions">
+                <button class="btn btn-gradient" onclick="openModal()">
+                    <i class="fa-solid fa-plus-circle"></i> New Journey
+                </button>
+                
+                <div class="profile-menu">
+                    {% if current_user.profile_photo_path %}
+                        <img src="{{ url_for('static', filename=current_user.profile_photo_path.split('static/')[1]) }}" class="profile-pic" alt="Profile" onclick="toggleDropdown()">
+                    {% else %}
+                        <div class="profile-pic profile-placeholder" onclick="toggleDropdown()"><i class="fa-solid fa-user"></i></div>
+                    {% endif %}
+                    
+                    <div id="profileDropdown" class="dropdown-content">
+                        <a href="{{ url_for('profile') }}"><i class="fa-solid fa-user"></i> Profile</a>
+                        <a href="{{ url_for('logout') }}"><i class="fa-solid fa-door-open"></i> Logout</a>
                     </div>
-                {% endif %}
-            </a>
-            <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+                </div>
+            </div>
         </div>
     </nav>
-    
-    <!-- Main Content -->
-    <div class="main-content">
-        <div class="welcome-container">
-            <h1>Welcome Back! 👋</h1>
-            <div class="decorative-line"></div>
-            <p>You have successfully logged in to your account.</p>
-            <p>Explore and manage your profile with <span class="accent">ease</span>.</p>
-        </div>
-    </div>
-    
-    <!-- Journeys Section -->
-    <div class="main-content">
-        <div class="journeys-section">
-            <h2>Your Journeys</h2>
-            <div class="section-line"></div>
+
+    <div class="dashboard-wrapper">
+        <div class="pattern-overlay"></div>
+        <div class="container main-content fade-in">
             
-            <button class="create-journey-btn" onclick="openModal()">+ Create Journey</button>
-            
-            {% if records %}
-                {% for row in records %}
-                    <a href="{{ url_for('view_journey', Jid=row.Jid) }}" class="journey-link">
-                        <div class="journey-item">
-                            <h3>{{ row.J_name }}</h3>
-                            <p><strong>Start Date:</strong> {{ row.Start_date }}</p>
-                            <p><strong>End Date:</strong> {{ row.end_date }}</p>
-                            {% if row.description %}
-                                <p><strong>Description:</strong> {{ row.description }}</p>
-                            {% endif %}
-                        </div>
-                    </a>
-                {% endfor %}
-            {% else %}
-                <div class="no-journeys">
-                    <p>No journeys created yet</p>
+            <div class="greeting-header">
+                <h1>Welcome back, <span class="accent">{{ current_user.Name }}</span> 👋</h1>
+                <p>Where is clarity taking you next?</p>
+            </div>
+
+            <div class="summary-cards">
+                <div class="summary-card total-journeys">
+                    <div class="info">
+                        <h2>Total Journeys</h2>
+                        <span class="count">{{ records|length }}</span>
+                    </div>
+                    <div class="icon"><i class="fa-solid fa-folder-open"></i></div>
                 </div>
-            {% endif %}
+                
+                <div class="summary-card pending-tasks">
+                    <div class="info">
+                        <h2>Pending Reminders</h2>
+                        <span class="count highlight">{{ total_reminders }} active</span>
+                    </div>
+                    <div class="icon"><i class="fa-solid fa-bell"></i></div>
+                </div>
+                
+                <div class="summary-card budget-tracked">
+                    <div class="info">
+                        <h2>Total Budget Tracked</h2>
+                        <span class="count">${{ "{:,.2f}".format(total_budget) }}</span>
+                    </div>
+                    <div class="icon"><i class="fa-solid fa-wallet"></i></div>
+                </div>
+            </div>
+
+            <div class="journeys-section">
+                <div class="section-header">
+                    <h2>Your Active Journeys</h2>
+                </div>
+
+                {% if not records %}
+                    <div id="emptyState" class="empty-state-card fade-in">
+                        <div class="empty-visual">
+                            <i class="fa-solid fa-compass"></i>
+                            <div class="empty-lines"></div>
+                        </div>
+                        <div class="empty-content">
+                            <h3>A whole world is waiting.</h3>
+                            <p>Organize stops, track budgets, and preserve memories — all in one place. Your next great adventure is just a click away.</p>
+                            <button class="btn btn-gradient btn-large btn-full" onclick="openModal()">
+                                Start Your First Adventure
+                            </button>
+                        </div>
+                    </div>
+                {% else %}
+                    <div id="journeyGrid" class="journey-grid"></div>
+                {% endif %}
+            </div>
+
         </div>
     </div>
-    
-    <!-- Modal for Create Journey Form -->
-    <div id="journeyModal" class="modal">
-        <div class="modal-content">
-            <iframe id="journeyFrame" src="/create_journey" frameborder="0"></iframe>
+
+    <div id="addJourneyModal" class="modal-overlay">
+        <div class="modal-content form-wrapper fade-in">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            
+            <div class="form-header">
+                <h2>Plan Your Next Adventure</h2>
+                <p>Let's map out your next great trip.</p>
+            </div>
+            
+            <form id="addJourneyForm" class="auth-form">
+                <div class="form-group">
+                    <label for="J_name">Journey Name</label>
+                    <input type="text" id="J_name" name="J_name" required placeholder="European Escapade">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="start_date">Start Date</label>
+                        <input type="date" id="start_date" name="start_date" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="end_date">End Date</label>
+                        <input type="date" id="end_date" name="end_date" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="description">Trip Description (Optional)</label>
+                    <textarea id="description" name="description" rows="3" placeholder="Notes, goals, or expectations for the trip..."></textarea>
+                </div>
+
+                <button type="submit" class="btn-submit btn-gradient">Create Journey</button>
+            </form>
         </div>
     </div>
+
+    <footer class="footer subtle-footer">
+        <div class="footer-container">
+            <div class="footer-brand subtle-brand">
+                <h2>TrekFolio</h2>
+                <p>Your journeys. Organized for life..</p>
+            </div>
+            <div class="footer-social subtle-social">
+                <div class="social-icons">
+                    <a href="mailto:sankarkrishnap124@gmail.com" title="Email Me"><i class="fa-solid fa-envelope"></i></a>
+                    <a href="https://www.linkedin.com/in/sankar-krishna-p/" target="_blank" rel="noopener noreferrer" title="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
+                    <a href="https://github.com/SANKAR-124" target="_blank" rel="noopener noreferrer" title="GitHub"><i class="fa-brands fa-github"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom subtle-bottom">
+            <p>&copy; 2026 TJP. All rights reserved.</p>
+            <p>Built by SANKAR & Irfaahh</p>
+        </div>
+    </footer>
+
+    <div id="journey-data" data-json="{{ journeys_json }}" style="display: none;"></div>
     
-    <script src="{{url_for('static',filename='js/dashboard.js')}}"></script>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 </body>
 </html>

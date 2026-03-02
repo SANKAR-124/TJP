@@ -1,6 +1,5 @@
 const journeyDataEl = document.getElementById('journey-data');
 const journeyId = journeyDataEl.getAttribute('data-jid');
-
 const journeyData = {
     name: journeyDataEl.getAttribute('data-name'),
     startDate: journeyDataEl.getAttribute('data-start'),
@@ -8,412 +7,237 @@ const journeyData = {
     description: journeyDataEl.getAttribute('data-desc')
 };
 
-// Set today's date as default for expense date picker (when form loads)
 document.addEventListener('DOMContentLoaded', function () {
     const expenseDateInput = document.getElementById('expense_date');
     if (expenseDateInput) {
-        const today = new Date().toISOString().split('T')[0];
-        expenseDateInput.value = today;
+        expenseDateInput.value = new Date().toISOString().split('T')[0];
     }
-
-    // Initialize form action
     document.getElementById('destinationForm').action = `/add_destination/${journeyId}`;
 });
 
-// View destination - navigate to destination details page
-function viewDestination(destId) {
-    window.location.href = `/destination/${destId}`;
-}
+function viewDestination(destId) { window.location.href = `/destination/${destId}`; }
 
-// Open destination modal for new destination
+// Modal Logic
 function openDestinationModal() {
     const modal = document.getElementById('destinationModal');
-    const form = document.getElementById('destinationForm');
-    const modalTitle = document.getElementById('modalTitle');
-    const submitBtn = document.getElementById('submitBtn');
-
-    // Reset for new destination
-    form.reset();
-    form.action = `/add_destination/${journeyId}`;
-    modalTitle.textContent = 'Add Destination';
-    submitBtn.textContent = 'Add Destination';
-
+    document.getElementById('destinationForm').reset();
+    document.getElementById('destinationForm').action = `/add_destination/${journeyId}`;
+    document.getElementById('modalTitle').textContent = 'Add Destination';
+    document.getElementById('submitBtn').textContent = 'Save';
     modal.classList.add('show');
 }
 
-// Open destination modal for editing
 function openEditModal(button) {
     const modal = document.getElementById('destinationModal');
     const form = document.getElementById('destinationForm');
-    const modalTitle = document.getElementById('modalTitle');
-    const submitBtn = document.getElementById('submitBtn');
-    const deleteBtn = document.getElementById('deleteDestBtn');
 
-    // Extract data from button attributes
-    const destId = button.getAttribute('data-id');
-    const destName = button.getAttribute('data-name');
-    const destOrder = button.getAttribute('data-order');
-    const destStatus = button.getAttribute('data-status');
-    const destIsMain = button.getAttribute('data-is_main');
-    const destMap = button.getAttribute('data-map');
+    document.getElementById('place_name').value = button.getAttribute('data-name');
+    document.getElementById('visit_order').value = button.getAttribute('data-order');
+    document.getElementById('visit_status').value = button.getAttribute('data-status');
+    document.getElementById('is_main').value = button.getAttribute('data-is_main');
+    document.getElementById('map').value = button.getAttribute('data-map');
 
-    // Populate form with destination data
-    document.getElementById('place_name').value = destName;
-    document.getElementById('visit_order').value = destOrder;
-    document.getElementById('visit_status').value = destStatus;
-    document.getElementById('is_main').value = destIsMain;
-    document.getElementById('map').value = destMap;
+    form.action = `/edit_destination/${button.getAttribute('data-id')}`;
+    window.currentEditingDestId = button.getAttribute('data-id');
 
-    // Change form action to edit route
-    form.action = `/edit_destination/${destId}`;
-
-    // Store the destination ID for delete function
-    window.currentEditingDestId = destId;
-
-    // Show delete button and update modal title and button text
-    deleteBtn.style.display = 'block';
-    modalTitle.textContent = 'Edit Destination';
-    submitBtn.textContent = 'Update Destination';
-
+    document.getElementById('deleteDestBtn').style.display = 'block';
+    document.getElementById('modalTitle').textContent = 'Edit Destination';
+    document.getElementById('submitBtn').textContent = 'Update';
     modal.classList.add('show');
 }
 
-// Close destination modal
 function closeDestinationModal() {
-    const modal = document.getElementById('destinationModal');
-    modal.classList.remove('show');
-    document.getElementById('destinationForm').reset();
-    // Hide delete button when closing modal
+    document.getElementById('destinationModal').classList.remove('show');
     document.getElementById('deleteDestBtn').style.display = 'none';
 }
 
-// Close modal when clicking outside
-window.addEventListener('click', function (event) {
-    const modal = document.getElementById('destinationModal');
-    if (event.target === modal) {
-        closeDestinationModal();
-    }
-});
-
-// Handle form submission
-document.getElementById('destinationForm').addEventListener('submit', function (e) {
-    e.preventDefault();
-
-    const formData = new FormData(this);
-    const formAction = this.action; // Use the form's action attribute
-
-    fetch(formAction, {
-        method: 'POST',
-        body: formData
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // alert('Destination added successfully!');
-                closeDestinationModal();
-                location.reload();
-            } else {
-                alert('Error. Please try again.');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error. Please try again.');
-        });
-});
-
-// Delete destination function
-function deleteDestination() {
-    if (confirm('Are you sure you want to delete this destination? This action cannot be undone.')) {
-        fetch(`/delete_destination/${window.currentEditingDestId}`, {
-            method: 'POST'
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    closeDestinationModal();
-                    location.reload();
-                } else {
-                    alert('Error deleting destination. Please try again.');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error deleting destination. Please try again.');
-            });
-    }
-}
-
-
-// Open Edit Journey Modal
 function openEditJourneyModal() {
-    const modal = document.getElementById('editJourneyModal');
-
-    // Populate form with journey data using the safe |tojson filter
     document.getElementById('edit_j_name').value = journeyData.name;
     document.getElementById('edit_start_date').value = journeyData.startDate;
     document.getElementById('edit_end_date').value = journeyData.endDate;
     document.getElementById('edit_description').value = journeyData.description;
-
-    modal.classList.add('show');
+    document.getElementById('editJourneyModal').classList.add('show');
 }
 
-// Close Edit Journey Modal
-function closeEditJourneyModal() {
-    const modal = document.getElementById('editJourneyModal');
-    modal.classList.remove('show');
-    document.getElementById('editJourneyForm').reset();
-}
+function closeEditJourneyModal() { document.getElementById('editJourneyModal').classList.remove('show'); }
+function openBudgetModal() { document.getElementById('budgetModal').classList.add('show'); }
+function closeBudgetModal() { document.getElementById('budgetModal').classList.remove('show'); }
 
-// Close journey modal when clicking outside
-window.addEventListener('click', function (event) {
-    const journeyModal = document.getElementById('editJourneyModal');
-    if (event.target === journeyModal) {
-        closeEditJourneyModal();
-    }
+window.addEventListener('click', function (e) {
+    if (e.target.classList.contains('modal')) e.target.classList.remove('show');
 });
 
-// Handle edit journey form submission
+// Form Submissions
+document.getElementById('destinationForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    fetch(this.action, { method: 'POST', body: new FormData(this) })
+        .then(r => r.json()).then(d => d.success ? location.reload() : alert('Error.'));
+});
+
 document.getElementById('editJourneyForm').addEventListener('submit', function (e) {
     e.preventDefault();
-
-    const formData = new FormData(this);
-
-    fetch(`/edit_journey/${journeyId}`, {
-        method: 'POST',
-        body: formData
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                closeEditJourneyModal();
-                location.reload();
-            } else {
-                alert('Error updating journey. Please try again.');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error updating journey. Please try again.');
-        });
+    fetch(`/edit_journey/${journeyId}`, { method: 'POST', body: new FormData(this) })
+        .then(r => r.json()).then(d => d.success ? location.reload() : alert('Error.'));
 });
 
-// Delete journey function
-function deleteJourney() {
-    if (confirm('Are you sure you want to delete this journey? This action cannot be undone and will delete ALL associated destinations.')) {
-        fetch(`/delete_journey/${journeyId}`, {
-            method: 'POST'
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    window.location.href = '/dashboard';
-                } else {
-                    alert('Error deleting journey. Please try again.');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error deleting journey. Please try again.');
-            });
+document.getElementById('budgetForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    fetch(`/add_budget/${journeyId}`, { method: 'POST', body: new FormData(this) })
+        .then(r => r.json()).then(d => d.success ? location.reload() : alert('Error.'));
+});
+
+const expenseForm = document.getElementById('expenseForm');
+if (expenseForm) {
+    expenseForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        fetch(`/add_expense/${journeyId}`, { method: 'POST', body: new FormData(this) })
+            .then(r => r.json()).then(d => d.success ? location.reload() : alert('Error.'));
+    });
+}
+
+// Deletions & Toggles
+function deleteDestination() {
+    if (confirm('Delete this destination?')) {
+        fetch(`/delete_destination/${window.currentEditingDestId}`, { method: 'POST' })
+            .then(r => r.json()).then(d => d.success ? location.reload() : alert('Error.'));
     }
 }
 
-// Toggle destination status
+function deleteJourney() {
+    if (confirm('Delete this journey? This action cannot be undone.')) {
+        fetch(`/delete_journey/${journeyId}`, { method: 'POST' })
+            .then(r => r.json()).then(d => d.success ? window.location.href = '/dashboard' : alert('Error.'));
+    }
+}
+
+function deleteExpense(expenseId) {
+    if (confirm('Delete this expense?')) {
+        fetch(`/delete_expense/${expenseId}`, { method: 'POST' })
+            .then(r => r.json()).then(d => d.success ? location.reload() : alert('Error.'));
+    }
+}
+
 function toggleStatus(destId, buttonElement) {
-    fetch(`/toggle_status/${destId}`, {
-        method: 'POST'
-    })
-        .then(response => response.json())
+    fetch(`/toggle_status/${destId}`, { method: 'POST' })
+        .then(r => r.json())
         .then(data => {
             if (data.success) {
-                // Update the status badge dynamically without page reload
-                const statusBadge = document.getElementById(`status-${destId}`);
-                statusBadge.textContent = data.new_status;
-
-                // Change color based on status
-                statusBadge.style.backgroundColor = data.new_status === 'visited' ? '#28a745' : '#667eea';
-                statusBadge.style.transition = 'all 0.3s ease';
-            } else {
-                alert('Error toggling status. Please try again.');
+                const badge = document.getElementById(`status-${destId}`);
+                badge.textContent = data.new_status.charAt(0).toUpperCase() + data.new_status.slice(1);
+                badge.className = `status-pill status-${data.new_status}`;
             }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error toggling status. Please try again.');
         });
 }
 
-// Real-time reminder updates
-let remindersContainer = document.getElementById('remindersContainer');
-
+// Reminders Real-time Update (Adjusted for new HTML structure)
 function updateReminders() {
     fetch(`/get_journey_reminders/${journeyId}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                const reminders = data.reminders;
+                const remindersContainer = document.getElementById('remindersContainer');
+                const badge = document.querySelector('.reminders-header .badge');
+                if (badge) badge.textContent = data.reminders.length;
 
-                // Get current reminder IDs in the DOM
-                const currentReminders = new Set(
-                    Array.from(document.querySelectorAll('.reminder-item'))
-                        .map(el => parseInt(el.getAttribute('data-reminder-id')))
-                );
+                const currentIds = new Set(Array.from(document.querySelectorAll('.reminder-item')).map(el => parseInt(el.getAttribute('data-reminder-id'))));
+                const apiIds = new Set(data.reminders.map(r => r.Rid));
 
-                // Get reminder IDs from the API
-                const apiReminders = new Set(reminders.map(r => r.Rid));
-
-                // Find reminders to remove (completed)
-                currentReminders.forEach(remId => {
-                    if (!apiReminders.has(remId)) {
-                        // Reminder was removed/completed
-                        const reminderEl = document.querySelector(`[data-reminder-id="${remId}"]`);
-                        if (reminderEl) {
-                            reminderEl.classList.add('removing');
-                            setTimeout(() => {
-                                reminderEl.remove();
-
-                                // Show empty message if no reminders left
-                                if (document.querySelectorAll('.reminder-item').length === 0) {
-                                    remindersContainer.innerHTML = '<div class="reminders-empty">No pending reminders</div>';
-                                }
-                            }, 300);
-                        }
+                currentIds.forEach(id => {
+                    if (!apiIds.has(id)) {
+                        const el = document.querySelector(`[data-reminder-id="${id}"]`);
+                        if (el) el.remove();
                     }
                 });
 
-                // Find new reminders to add
-                reminders.forEach(reminder => {
-                    if (!currentReminders.has(reminder.Rid)) {
-                        // New reminder
-                        const reminderEl = document.createElement('div');
-                        reminderEl.className = 'reminder-item';
-                        reminderEl.setAttribute('data-reminder-id', reminder.Rid);
-                        reminderEl.setAttribute('data-destination-id', reminder.Did);
-                        reminderEl.innerHTML = `
-                                    <div class="reminder-destination">${reminder.destination_name}</div>
-                                    <div class="reminder-text">${reminder.rem_text}</div>
-                                `;
-
-                        // Remove empty message if it exists
+                data.reminders.forEach(reminder => {
+                    if (!currentIds.has(reminder.Rid)) {
                         const emptyMsg = remindersContainer.querySelector('.reminders-empty');
-                        if (emptyMsg) {
-                            emptyMsg.remove();
-                        }
+                        if (emptyMsg) emptyMsg.remove();
 
-                        // Add to the beginning (since flex-direction: column-reverse)
-                        remindersContainer.insertBefore(reminderEl, remindersContainer.firstChild);
+                        const div = document.createElement('div');
+                        div.className = 'reminder-item';
+                        div.setAttribute('data-reminder-id', reminder.Rid);
+                        div.innerHTML = `
+                            <div class="rem-header">
+                                <span class="rem-tag">${reminder.destination_name}</span>
+                                <div class="rem-dot"></div>
+                            </div>
+                            <div class="rem-text">${reminder.rem_text}</div>
+                        `;
+                        remindersContainer.prepend(div);
                     }
                 });
+
+                if (data.reminders.length === 0 && !remindersContainer.querySelector('.reminders-empty')) {
+                    remindersContainer.innerHTML = `<div class="reminders-empty"><p>All caught up! No pending reminders for this journey.</p></div>`;
+                }
             }
-        })
-        .catch(error => console.error('Error updating reminders:', error));
+        });
+}
+setInterval(updateReminders, 2000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) updateReminders(); });
+
+// --- Profile Dropdown Logic ---
+function toggleProfileMenu() {
+    document.getElementById("profileDropdown").classList.toggle("show");
 }
 
-// Poll for reminder updates every 2 seconds
-setInterval(updateReminders, 2000);
-
-// Also update when the user returns to the tab
-document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) {
-        updateReminders();
+// Close the dropdown if the user clicks anywhere outside of it
+window.addEventListener('click', function (event) {
+    if (!event.target.matches('.profile-pic')) {
+        const dropdowns = document.getElementsByClassName("dropdown-content");
+        for (let i = 0; i < dropdowns.length; i++) {
+            const openDropdown = dropdowns[i];
+            if (openDropdown.classList.contains('show')) {
+                openDropdown.classList.remove('show');
+            }
+        }
     }
 });
 
-// Budget Modal Functions
-function openBudgetModal() {
-    const modal = document.getElementById('budgetModal');
+// --- Edit Budget Modal Functions ---
+function openEditBudgetModal(currentAmount) {
+    const modal = document.getElementById('editBudgetModal');
+    // Pre-fill the input with the current budget amount
+    document.getElementById('edit_budget_amount').value = currentAmount;
     modal.classList.add('show');
 }
 
-function closeBudgetModal() {
-    const modal = document.getElementById('budgetModal');
+function closeEditBudgetModal() {
+    const modal = document.getElementById('editBudgetModal');
     modal.classList.remove('show');
-    document.getElementById('budgetForm').reset();
 }
 
-// Close modal when clicking outside
+// Close Edit Budget modal when clicking outside
 window.addEventListener('click', function (event) {
-    const modal = document.getElementById('budgetModal');
+    const modal = document.getElementById('editBudgetModal');
     if (event.target === modal) {
-        closeBudgetModal();
+        closeEditBudgetModal();
     }
 });
 
-// Handle budget form submission
-document.getElementById('budgetForm').addEventListener('submit', function (e) {
-    e.preventDefault();
-
-    const formData = new FormData(this);
-
-    fetch(`/add_budget/${journeyId}`, {
-        method: 'POST',
-        body: formData
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // alert('Budget set successfully!');
-                location.reload();
-            } else {
-                alert('Error: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error setting budget. Please try again.');
-        });
-});
-// Handle expense form submission (only if budget is set)
-const expenseForm = document.getElementById('expenseForm');
-if (expenseForm) {
-    expenseForm.addEventListener('submit', function (e) {
+// Handle Edit Budget form submission
+const editBudgetForm = document.getElementById('editBudgetForm');
+if (editBudgetForm) {
+    editBudgetForm.addEventListener('submit', function (e) {
         e.preventDefault();
-
         const formData = new FormData(this);
 
-        fetch(`/add_expense/${journeyId}`, {
+        fetch(`/edit_budget/${journeyId}`, {
             method: 'POST',
             body: formData
         })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // alert('Expense added successfully!');
-                    location.reload();
+                    location.reload(); // Reload to update the UI with new budget
                 } else {
                     alert('Error: ' + data.message);
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Error adding expense. Please try again.');
+                alert('Error updating budget. Please try again.');
             });
     });
-}
-
-// Delete expense function
-function deleteExpense(expenseId) {
-    if (!confirm('Are you sure you want to delete this expense?')) return;
-
-    fetch(`/delete_expense/${expenseId}`, {
-        method: 'POST'
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const expenseEl = document.getElementById(`expense-${expenseId}`);
-                expenseEl.classList.add('removing');
-                setTimeout(() => {
-                    expenseEl.remove();
-                    location.reload(); // Reload to update totals
-                }, 300);
-            } else {
-                alert('Error deleting expense. Please try again.');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error deleting expense. Please try again.');
-        });
 }

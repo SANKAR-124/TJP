@@ -1,5 +1,6 @@
 from flask import Flask, render_template,jsonify, request, redirect, url_for, flash, session
 import os
+import json
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import check_password_hash,generate_password_hash
 from datetime import datetime,UTC
@@ -156,7 +157,39 @@ def logout():
 @login_required
 def dashboard():
     user_records=JOURNEY.query.filter_by(User_ID=current_user.User_ID).all()
-    return render_template('dashboard.html',records=user_records)
+    total_pending_reminders=0
+    total_budget_tracked=0
+
+    journeys_data=[]
+    today = datetime.utcnow()
+
+    for journey in user_records:
+        budget=BUDGET.query.filter_by(Jid=journey.Jid).first()
+        if budget:
+            total_budget_tracked+=budget.t_b_amount
+        
+        destinations=DESTINATION.query.filter_by(Jid=journey.Jid).all()
+        for dest in destinations:
+            pending_count=REMINDER.query.filter_by(Did=dest.Did,status=0).count()
+            total_pending_reminders+=pending_count
+        if journey.end_date<today:
+            status='completed'
+        elif journey.Start_date>today:
+            status='upcoming'
+        else:
+            status='In Progress'
+        
+        journeys_data.append({
+            'Jid': journey.Jid,
+            'J_name': journey.J_name,
+            'Start_date': journey.Start_date.strftime('%b %d, %Y'),
+            'end_date': journey.end_date.strftime('%b %d, %Y'),
+            'description': journey.description,
+            'status': status
+        })
+    journeys_json=json.dumps(journeys_data)
+
+    return render_template('dashboard.html',records=user_records,journeys_json=journeys_json,total_reminders=total_pending_reminders,total_budget=total_budget_tracked)
 
 @app.route('/create_journey',methods=['GET','POST'])
 @login_required
@@ -181,6 +214,7 @@ def create_journey():
 @login_required
 def view_journey(Jid):
     target_journey=db.session.get(JOURNEY,Jid)
+    user_records=JOURNEY.query.filter_by(User_ID=current_user.User_ID).all()
     if not target_journey or target_journey.User_ID != current_user.User_ID:
         flash("Access denied or Journey not found.", "error")
         return redirect(url_for('dashboard'))
@@ -203,7 +237,7 @@ def view_journey(Jid):
     total_spent=sum(float(exp.amount) for exp in expenses)
     remaining=(budget.t_b_amount-total_spent)if budget else 0
     
-    return render_template('journey.html',JOURNEY=target_journey,DESTINATION=saved_destinations,REMINDERS=pending_reminders,BUDGET=budget,EXPENSES=expenses,TOTAL_SPENT=total_spent,REMAINING= remaining)
+    return render_template('journey.html',JOURNEY=target_journey,DESTINATION=saved_destinations,REMINDERS=pending_reminders,BUDGET=budget,EXPENSES=expenses,TOTAL_SPENT=total_spent,REMAINING= remaining,user_records=user_records)
 
 @app.route('/add_destination/<int:Jid>',methods=['POST'])
 @login_required
@@ -309,14 +343,41 @@ def toggle_status(Did):
 @app.route('/destination/<int:Did>')
 @login_required
 def view_destination(Did):
-    target_dest=db.session.get(DESTINATION,Did)
-    target_journey=db.session.get(JOURNEY,target_dest.Jid)
+    target_dest = db.session.get(DESTINATION, Did)
+    
+    if not target_dest:
+        flash("Destination not found", "error")
+        return redirect(url_for('dashboard'))
+        
+    target_journey = db.session.get(JOURNEY, target_dest.Jid)
     if not target_journey or target_journey.User_ID != current_user.User_ID:
         flash("Access denied", "error")
         return redirect(url_for('dashboard'))
-    logs=TRAVEL_LOG.query.filter_by(Did=Did).all()
-    reminders=REMINDER.query.filter_by(Did=Did).all()
-    return render_template("destination.html",destination=target_dest,logs=logs,reminders=reminders)
+        
+    logs = TRAVEL_LOG.query.filter_by(Did=Did).order_by(TRAVEL_LOG.created_at.desc()).all()
+    
+    for log in logs:
+        if log.photo_path:
+            try:
+                log.photos = json.loads(log.photo_path) 
+            except json.JSONDecodeError:
+                # Fallback for old logs
+                log.photos = [log.photo_path]
+            
+            # Normalize paths so both old and new photos work perfectly with Flask's url_for
+            clean_photos = []
+            for p in log.photos:
+                if p.startswith('static/'):
+                    clean_photos.append(p.replace('static/', '', 1))
+                else:
+                    clean_photos.append(p)
+            log.photos = clean_photos
+        else:
+            log.photos = []
+
+    reminders = REMINDER.query.filter_by(Did=Did).all()
+    
+    return render_template("destination.html", DESTINATION=target_dest, logs=logs, reminders=reminders)
 
 @app.route('/travel_log/<int:Did>',methods=['GET','POST'])
 @login_required
@@ -331,24 +392,36 @@ def travel_log(Did):
 
     try:
         note=request.form.get('note')
-        photo_path=None
-        if 'log_photo' in request.files:
-            file=request.files['log_photo']
+        saved_photo_paths=[]
+        # 1. Grab the LIST of files sent from the frontend
+        files = request.files.getlist('log_photos')
+        
+        # 2. Loop through them and save each one
+        for idx, file in enumerate(files):
             if file and file.filename != '' and allowed_file(file.filename):
-                ext=file.filename.rsplit('.',1)[1].lower()
-                date_str=datetime.utcnow().strftime('%Y%m%d_%H%M%S')
-                new_filename=f"log_dest{Did}_{date_str}.{ext}"
-                save_path=os.path.join(app.config['UPLOAD_FOLDER'],new_filename)
+                ext = file.filename.rsplit('.', 1)[1].lower()
+                # Added 'idx' to the filename so multiple files in the same second don't overwrite each other
+                date_str = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+                new_filename = f"log_dest{Did}_{date_str}_{idx}.{ext}"
+                
+                save_path = os.path.join(app.config['UPLOAD_FOLDER'], new_filename)
                 file.save(save_path)
-                photo_path=f"static/UPLOADS/{new_filename}"
-        new_log=TRAVEL_LOG(Did=Did,note_text=note,photo_path=photo_path)
+                
+                # Keep track of the saved path
+                saved_photo_paths.append(f"UPLOADS/{new_filename}") # Storing relative path for cleaner DB
+
+        # 3. Convert the list of paths into a JSON string
+        photo_path_json = json.dumps(saved_photo_paths) if saved_photo_paths else None
+
+        new_log = TRAVEL_LOG(Did=Did, note_text=note, photo_path=photo_path_json)
         db.session.add(new_log)
         db.session.commit()
-        return jsonify(success=True,message="Log added successfully")
+        return jsonify(success=True, message="Log added successfully")
     except Exception as e:
         db.session.rollback()
         print(f"DATABASE ERROR: {e}")
         return jsonify(success=False,message="An error occurred while adding the log")
+
 @app.route('/add_reminder/<int:Did>',methods=['POST'])
 @login_required
 def add_reminder(Did):
@@ -635,6 +708,30 @@ def update_profile():
         return jsonify(success=False, error=str(e)), 500
     
 
+@app.route('/edit_budget/<int:Jid>',methods=['POST'])
+@login_required
+def edit_budget(Jid):
+    target_journey=db.session.get(JOURNEY,Jid)
+    if not target_journey or target_journey.User_ID != current_user.User_ID:
+        return jsonify(success=False,message="Access denied"),403
+    
+    existing_budget=BUDGET.query.filter_by(Jid=Jid).first()
+    if not existing_budget:
+        return jsonify(success=False,message="Budget does not exist!"),400
+    amount=request.form.get('amount',type=float)
+    if not amount or amount<=0:
+        return jsonify(success=False,message="Amount must be greater than 0"),400
+    try:
+        existing_budget.t_b_amount=amount
+        db.session.commit()
+        return jsonify(success=True,message="Budget updated successfully")
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(success=False,message="Database error"),500
+
+
+    
+    
     
 if __name__=="__main__":
     app.run(debug=True)

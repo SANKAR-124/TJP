@@ -6,295 +6,341 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ JOURNEY.J_name }} - Journey Details</title>
     <link rel="stylesheet" href="{{url_for('static',filename='css/journey.css')}}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 
 <body>
-    <!-- Reminders Sidebar -->
-    <aside class="reminders-sidebar">
-        <div class="reminders-header">📌 Pending Reminders</div>
-        <div class="reminders-container" id="remindersContainer">
-            {% if REMINDERS|length > 0 %}
-            {% for reminder in REMINDERS %}
-            <div class="reminder-item" data-reminder-id="{{ reminder.Rid }}" data-destination-id="{{ reminder.Did }}">
-                <div class="reminder-destination">{{ reminder.destination_name }}</div>
-                <div class="reminder-text">{{ reminder.rem_text }}</div>
-            </div>
-            {% endfor %}
-            {% else %}
-            <div class="reminders-empty">No pending reminders</div>
-            {% endif %}
-        </div>
-    </aside>
-
-    <!-- Navbar -->
     <nav class="navbar">
-        <div class="navbar-brand">{{ JOURNEY.J_name }}</div>
-        <div style="display: flex; gap: 10px;">
-            <button class="edit-journey-btn" onclick="openEditJourneyModal()">✏️ Edit Journey</button>
-            <a href="{{ url_for('dashboard') }}" class="back-btn">← Back to Dashboard</a>
+        <div class="nav-container">
+            <div class="nav-left">
+                <a href="{{ url_for('dashboard') }}" class="btn-back">← Back to Dashboard</a>
+            </div>
+            <div class="nav-center">
+                <h1 class="nav-title">{{ JOURNEY.J_name }}</h1>
+            </div>
+            <!-- <div class="nav-right">
+                <button class="btn-outline" onclick="openEditJourneyModal()">✏️ Edit Journey</button> -->
+
+            <div class="nav-right">
+                <button class="btn-outline" onclick="openEditJourneyModal()">✏️ Edit Journey</button>
+
+                <div class="profile-menu">
+                    {% if current_user.profile_photo_path %}
+                    <img src="{{ url_for('static', filename=current_user.profile_photo_path.split('static/')[1]) }}"
+                        alt="Profile" class="profile-pic" onclick="toggleProfileMenu()"
+                        onerror="this.src='{{ url_for('static', filename='images/default-avatar.png') }}'">
+                    {% else %}
+                    <div class="profile-pic profile-placeholder" onclick="toggleProfileMenu()">
+                        {{ current_user.Name[0] | upper }}
+                    </div>
+                    {% endif %}
+
+                    <div class="dropdown-content" id="profileDropdown">
+                        <a href="{{ url_for('dashboard') }}"><i class="fa-solid fa-house"></i> Dashboard</a>
+                        <a href="{{ url_for('profile') }}"><i class="fa-solid fa-user"></i> Profile</a>
+                        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 5px 0;">
+                        <a href="{{ url_for('logout') }}"><i class="fa-solid fa-arrow-right-from-bracket"></i>
+                            Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <div class="main-content">
-        <!-- Journey Header -->
-        <div class="journey-header">
-            <h1>{{ JOURNEY.J_name }}</h1>
-            <div class="decorative-line"></div>
-            <div class="journey-details">
-                <div class="detail-item">
-                    <strong>Start Date:</strong>
-                    <p>{{ JOURNEY.Start_date.strftime('%B %d, %Y') }}</p>
+    <div class="layout-container">
+
+        <div class="content-left">
+
+            <div class="journey-header-card">
+                <div class="header-main">
+                    <h2>{{ JOURNEY.J_name }}</h2>
+                    <span class="status-badge status-inprogress">In Progress</span>
                 </div>
-                <div class="detail-item">
-                    <strong>End Date:</strong>
-                    <p>{{ JOURNEY.end_date.strftime('%B %d, %Y') }}</p>
+                <div class="journey-dates">
+                    📅 {{ JOURNEY.Start_date.strftime('%B %d, %Y') }} — {{ JOURNEY.end_date.strftime('%B %d, %Y') }}
                 </div>
                 {% if JOURNEY.description %}
-                <div class="detail-item" style="grid-column: 1 / -1;">
-                    <strong>Description:</strong>
-                    <p>{{ JOURNEY.description }}</p>
+                <p class="journey-description">{{ JOURNEY.description }}</p>
+                {% endif %}
+            </div>
+
+            <div class="section-card">
+                <div class="section-header-flex">
+                    <h3>📍 Destination Timeline</h3>
+                    {% if DESTINATION|length > 0 %}
+                    <button class="btn-text" onclick="openDestinationModal()">+ Add Destination</button>
+                    {% endif %}
+                </div>
+
+                {% if DESTINATION|length > 0 %}
+                <div class="timeline-container">
+                    {% for destination in DESTINATION | sort(attribute='visit_order') %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker">{{ destination.visit_order }}</div>
+                        <div class="destination-card">
+                            <div class="dest-info">
+                                <h4>{{ destination.place_name }} {% if destination.is_main %}⭐{% endif %}</h4>
+                                <div class="dest-meta">
+                                    <span class="status-pill status-{{ destination.visit_status }}"
+                                        id="status-{{ destination.Did }}">{{ destination.visit_status | capitalize
+                                        }}</span>
+                                    {% if destination.map %}
+                                    <a href="{{ destination.map }}" target="_blank" class="map-link">🗺️ View Map</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="dest-actions">
+                                <button type="button" class="btn-icon" title="Toggle Status"
+                                    onclick="toggleStatus({{ destination.Did }}, this)">Change status</button>
+                                <button type="button" class="btn-icon" title="View Details"
+                                    onclick="viewDestination({{ destination.Did }})">View Destination</button>
+                                <button type="button" class="btn-icon" title="Edit" onclick="openEditModal(this)"
+                                    data-id="{{ destination.Did }}" data-name="{{ destination.place_name }}"
+                                    data-order="{{ destination.visit_order }}"
+                                    data-status="{{ destination.visit_status }}"
+                                    data-is_main="{{ destination.is_main|int }}"
+                                    data-map="{{ destination.map or '' }}">Edit</button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state-box">
+                    <div class="empty-icon">🗺️</div>
+                    <h4>Your map is blank!</h4>
+                    <p>Every great journey starts with a single destination. Where are you heading first?</p>
+                    <button class="btn-primary" onclick="openDestinationModal()">+ Add Your First Destination</button>
                 </div>
                 {% endif %}
             </div>
+
+            <div class="section-card">
+                <div class="section-header-flex">
+                    <h3>💰 Financial Overview</h3>
+                    {% if BUDGET %}
+                    <button class="btn-text"
+                        onclick="document.getElementById('expenseFormContainer').classList.toggle('hidden')">+ Add
+                        Expense</button>
+                    {% endif %}
+                    <div class="expense-form-container">
+                        <button type="button" class="btn-text" style="width: 100%; "
+                            onclick="openEditBudgetModal({{ BUDGET.t_b_amount }})"> +Edit Total Budget</button>
+
+                    </div>
+                </div>
+
+
+                {% if BUDGET %}
+                <div class="financial-stats">
+                    <div class="stat-box">
+                        <span class="stat-label">Total Budget</span>
+                        <span class="stat-value">RS {{ "%.2f"|format(BUDGET.t_b_amount) }}</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Total Spent</span>
+                        <span class="stat-value">RS {{ "%.2f"|format(TOTAL_SPENT) }}</span>
+                    </div>
+                    <div class="stat-box {% if REMAINING >= 0 %}balance-positive{% else %}balance-negative{% endif %}">
+                        <span class="stat-label">Remaining Balance</span>
+                        <span class="stat-value">RS {{ "%.2f"|format(REMAINING) }}</span>
+                    </div>
+                </div>
+                <!-- <div class="expense-form-container">
+                    <button type="button" class="btn btn-secondary" style="width: 100%; margin-top: 15px;"
+                        onclick="openEditBudgetModal({{ BUDGET.t_b_amount }})"> Edit Total Budget</button>
+                </div> -->
+
+                <div id="expenseFormContainer" class="hidden form-dropdown">
+                    <form id="expenseForm" class="inline-form">
+                        <input type="text" id="expense_description" name="description"
+                            placeholder="What was this for? (e.g., Dinner)">
+                        <input type="number" id="expense_amount" name="amount" step="0.01" min="0.01" required
+                            placeholder="Amount ($)">
+                        <input type="date" id="expense_date" name="expense_date" title="Expense Date" required>
+                        <button type="submit" class="btn-primary">Save Expense</button>
+                    </form>
+                </div>
+                <h4 style="color: #667eea; margin-bottom: 15px;">Spending History</h4>
+                {% if EXPENSES|length > 0 %}
+                <div class="expense-list">
+                    {% for expense in EXPENSES %}
+                    <div class="expense-item" id="expense-{{ expense.Eid }}">
+                        <div class="exp-left">
+                            <div class="exp-icon">💳</div>
+                            <div>
+                                <div class="exp-desc">{{ expense.description or 'Uncategorized Expense' }}</div>
+                                <div class="exp-date">{{ expense.expense_date.strftime('%B %d, %Y') }}</div>
+                            </div>
+                        </div>
+                        <div class="exp-right">
+                            <div class="exp-amount">-${{ "%.2f"|format(expense.amount) }}</div>
+                            <button type="button" class="btn-icon-danger" onclick="deleteExpense({{ expense.Eid }})"
+                                title="Delete">🗑️</button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-subtext">No expenses tracked yet.</div>
+                {% endif %}
+
+                {% else %}
+                <div class="empty-state-box">
+                    <div class="empty-icon">💵</div>
+                    <h4>No budget allocated</h4>
+                    <p>Keep your finances on track by setting an initial budget for this journey.</p>
+                    <button type="button" class="btn-primary" onclick="openBudgetModal()">Set Journey Budget</button>
+                </div>
+                {% endif %}
+            </div>
+
         </div>
-
-        <!-- Destinations Section -->
-        <div class="destinations-section">
-            <h2>Destinations</h2>
-            <div class="section-line"></div>
-
-            {% if DESTINATION|length > 0 %}
-            <!-- Display sorted destinations -->
-            {% for destination in DESTINATION | sort(attribute='visit_order') %}
-            <div class="destination-item">
-                <h3>{{ destination.place_name }}</h3>
-                <p><strong>Visit Order:</strong> #{{ destination.visit_order }}</p>
-                <p><strong>Status:</strong> <span id="status-{{ destination.Did }}"
-                        style="background: #667eea; color: white; padding: 2px 8px; border-radius: 5px; font-size: 12px;">{{
-                        destination.visit_status }}</span> <button type="button" class="btn-toggle-status"
-                        onclick="toggleStatus({{ destination.Did }}, this)"> 🔄 Toggle </button></p>
-                {% if destination.is_main %}
-                <p><strong>Main Destination:</strong> ✓ Yes</p>
-                {% endif %}
-                {% if destination.map %}
-                <p><strong>Map:</strong> <a href="{{ destination.map }}" target="_blank">View Map</a></p>
-                {% endif %}
-                <div class="destination-actions">
-                    <button type="button" class="btn-view" onclick="viewDestination({{ destination.Did }})">👁️
-                        View</button>
-                    <button type="button" class="btn-edit" onclick="openEditModal(this)" data-id="{{ destination.Did }}"
-                        data-name="{{ destination.place_name }}" data-order="{{ destination.visit_order }}"
-                        data-status="{{ destination.visit_status }}" data-is_main="{{ destination.is_main|int }}"
-                        data-map="{{ destination.map or '' }}">✏️ Edit</button>
-                </div>
-            </div>
-            {% endfor %}
-
-            <button class="btn btn-primary" onclick="openDestinationModal()">+ Add Another Destination</button>
-            {% else %}
-            <div class="no-destinations">
-                <p>No destinations created yet</p>
-            </div>
-            <button class="btn btn-primary" onclick="openDestinationModal()" style="display: block; margin: 0 auto;">+
-                Create Destination</button>
-            {% endif %}
-        </div>
-
-        <!-- Budget Section -->
-        <div class="budget-section">
-            <h2>💰 Budget & Expenses</h2>
-            <div class="section-line"></div>
-
-            {% if BUDGET %}
-            <!-- Display Budget Cards -->
-            <div class="budget-display">
-                <div class="budget-card">
-                    <div class="budget-card-label">Total Budget</div>
-                    <div class="budget-card-value">${{ "%.2f"|format(BUDGET.t_b_amount) }}</div>
-                </div>
-                <div class="budget-card">
-                    <div class="budget-card-label">Total Spent</div>
-                    <div class="budget-card-value">${{ "%.2f"|format(TOTAL_SPENT) }}</div>
-                </div>
-                <div class="budget-card {% if REMAINING >= 0 %}remaining{% else %}remaining negative{% endif %}">
-                    <div class="budget-card-label">Remaining Balance</div>
-                    <div class="budget-card-value">${{ "%.2f"|format(REMAINING) }}</div>
-                </div>
-            </div>
-
-            <!-- Expenses List -->
-            {% if EXPENSES|length > 0 %}
-            <div class="expense-list">
-                <h4 style="color: #667eea; margin-bottom: 15px;">Recent Expenses</h4>
-                {% for expense in EXPENSES %}
-                <div class="expense-item" id="expense-{{ expense.Eid }}">
-                    <div class="expense-details">
-                        <div class="expense-description">{{ expense.description or 'No description' }}</div>
-                        <div class="expense-meta">📅 {{ expense.expense_date.strftime('%B %d, %Y') }}</div>
+        <div class="content-right">
+            <div class="sticky-sidebar">
+                <div class="reminders-card">
+                    <div class="reminders-header">
+                        <h3>Journey Reminders</h3>
+                        <span class="badge">{{ REMINDERS|length }}</span>
                     </div>
-                    <div class="expense-amount">${{ "%.2f"|format(expense.amount) }}</div>
-                    <button type="button" class="btn-delete-expense" onclick="deleteExpense({{ expense.Eid }})">🗑️
-                        Delete</button>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="no-expenses">No expenses tracked yet</div>
-            {% endif %}
 
-            <!-- Add Expense Form -->
-            <div class="expense-form-container">
-                <h4 style="color: #667eea; margin-bottom: 15px;">Add New Expense</h4>
-                <form id="expenseForm">
-                    <div class="form-row">
-                        <div class="form-group-inline">
-                            <label for="expense_description">Description (Optional)</label>
-                            <input type="text" id="expense_description" name="description"
-                                placeholder="e.g., Hotel, Dinner, Transportation">
+                    <div class="reminders-list" id="remindersContainer">
+                        {% if REMINDERS|length > 0 %}
+                        {% for reminder in REMINDERS %}
+                        <div class="reminder-item" data-reminder-id="{{ reminder.Rid }}"
+                            data-destination-id="{{ reminder.Did }}">
+                            <div class="rem-header">
+                                <span class="rem-tag">{{ reminder.destination_name }}</span>
+                                <div class="rem-dot"></div>
+                            </div>
+                            <div class="rem-text">{{ reminder.rem_text }}</div>
                         </div>
-                        <div class="form-group-inline">
-                            <label for="expense_amount">Amount *</label>
-                            <input type="number" id="expense_amount" name="amount" step="0.01" min="0.01" required
-                                placeholder="0.00">
+                        {% endfor %}
+                        {% else %}
+                        <div class="reminders-empty">
+                            <p>All caught up! No pending reminders for this journey.</p>
                         </div>
+                        {% endif %}
                     </div>
-                    <div class="form-row full">
-                        <div class="form-group-inline">
-                            <label for="expense_date">Date *</label>
-                            <input type="date" id="expense_date" name="expense_date" required>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-primary" style="width: 100%;">+ Add Expense</button>
-                </form>
+                </div>
             </div>
-            {% else %}
-            <!-- No Budget Set -->
-            <div style="background: #f8f9fa; padding: 30px; border-radius: 10px; text-align: center; margin-top: 20px;">
-                <p style="color: #666; margin-bottom: 20px; font-size: 16px;">No budget set for this journey yet.</p>
-                <button type="button" class="btn-set-budget" onclick="openBudgetModal()">💵 Set Budget</button>
-            </div>
-            {% endif %}
         </div>
     </div>
-
-    <!-- Destination Modal -->
+    <footer class="footer subtle-footer">
+        <div class="footer-container">
+            <div class="footer-brand subtle-brand">
+                <h2>TrekFolio</h2>
+                <p>Plan smarter journeys. Travel with clarity.</p>
+            </div>
+            <div class="footer-social subtle-social">
+                <div class="social-icons">
+                    <a href="mailto:sankarkrishnap124@gmail.com" title="Email Me"><i
+                            class="fa-solid fa-envelope"></i></a>
+                    <a href="https://www.linkedin.com/in/sankar-krishna-p/" target="_blank" rel="noopener noreferrer"
+                        title="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
+                    <a href="https://github.com/SANKAR-124" target="_blank" rel="noopener noreferrer" title="GitHub"><i
+                            class="fa-brands fa-github"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom subtle-bottom">
+            <p>&copy; 2026 TrekFolio . All rights reserved.</p>
+            <p>Built by SANKAR & Irfaahh</p>
+        </div>
+    </footer>
     <div id="destinationModal" class="modal">
         <div class="modal-content">
             <h2 id="modalTitle">Add Destination</h2>
-            <div class="form-line"></div>
-
             <form id="destinationForm">
+                <div class="form-group"><label>Place Name *</label><input type="text" id="place_name" name="place_name"
+                        title="Place Name" required></div>
+                <div class="form-group"><label>Visit Order *</label><input type="number" id="visit_order"
+                        name="visit_order" title="Visit Order" min="1" required></div>
                 <div class="form-group">
-                    <label for="place_name">Place Name *</label>
-                    <input type="text" id="place_name" name="place_name" placeholder="e.g., Paris, London" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="visit_order">Visit Order *</label>
-                    <input type="number" id="visit_order" name="visit_order" placeholder="e.g., 1, 2, 3" min="1"
-                        required>
-                </div>
-
-                <div class="form-group">
-                    <label for="visit_status">Status *</label>
-                    <select id="visit_status" name="visit_status" required>
-                        <option value="">Select Status</option>
+                    <label>Status *</label>
+                    <select id="visit_status" name="visit_status" title="Visit Status" required>
                         <option value="planned">Planned</option>
                         <option value="visiting">Visiting</option>
                         <option value="visited">Visited</option>
                     </select>
                 </div>
-
-                <div class="form-group">
-                    <label for="is_main">Main Destination</label>
-                    <select id="is_main" name="is_main">
+                <div class="form-group"><label>Main Destination</label><select id="is_main" name="is_main"
+                        title="Main Destination">
                         <option value="0">No</option>
                         <option value="1">Yes</option>
-                    </select>
+                    </select></div>
+                <div class="form-group"><label>Map URL</label><input type="url" id="map" name="map" title="Map URL">
                 </div>
-
-                <div class="form-group">
-                    <label for="map">Map URL (Optional)</label>
-                    <input type="url" id="map" name="map" placeholder="e.g., https://maps.google.com/...">
-                </div>
-
                 <div class="form-buttons">
-                    <button type="button" class="form-btn form-btn-cancel"
-                        onclick="closeDestinationModal()">Cancel</button>
-                    <button type="button" id="deleteDestBtn" style="display: none; background: #dc3545;"
-                        class="form-btn" onclick="deleteDestination()">🗑️ Delete</button>
-                    <button type="submit" class="form-btn form-btn-submit" id="submitBtn">Add Destination</button>
+                    <button type="button" class="btn-secondary" onclick="closeDestinationModal()">Cancel</button>
+                    <button type="button" id="deleteDestBtn" style="display: none;" class="btn-danger"
+                        onclick="deleteDestination()">Delete</button>
+                    <button type="submit" class="btn-primary" id="submitBtn">Save</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Edit Journey Modal -->
     <div id="editJourneyModal" class="modal">
         <div class="modal-content">
             <h2>Edit Journey</h2>
-            <div class="form-line"></div>
-
             <form id="editJourneyForm">
-                <div class="form-group">
-                    <label for="edit_j_name">Journey Name *</label>
-                    <input type="text" id="edit_j_name" name="J_name" placeholder="e.g., Summer Vacation 2026" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="edit_start_date">Start Date *</label>
-                    <input type="date" id="edit_start_date" name="start_date" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="edit_end_date">End Date *</label>
-                    <input type="date" id="edit_end_date" name="end_date" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="edit_description">Description</label>
-                    <textarea id="edit_description" name="description"
-                        placeholder="Describe your journey..."></textarea>
-                </div>
-
+                <div class="form-group"><label>Journey Name *</label><input type="text" id="edit_j_name" name="J_name"
+                        title="Journey Name" required></div>
+                <div class="form-group"><label>Start Date *</label><input type="date" id="edit_start_date"
+                        name="start_date" title="Start Date" required></div>
+                <div class="form-group"><label>End Date *</label><input type="date" id="edit_end_date" name="end_date"
+                        title="End Date" required></div>
+                <div class="form-group"><label>Description</label><textarea id="edit_description" name="description"
+                        title="Description"></textarea></div>
                 <div class="form-buttons">
-                    <button type="button" class="form-btn form-btn-cancel"
-                        onclick="closeEditJourneyModal()">Cancel</button>
-                    <button type="button" id="deleteJourneyBtn" style="background: #dc3545;" class="form-btn"
-                        onclick="deleteJourney()">🗑️ Delete Journey</button>
-                    <button type="submit" class="form-btn form-btn-submit">Update Journey</button>
+                    <button type="button" class="btn-secondary" onclick="closeEditJourneyModal()">Cancel</button>
+                    <button type="button" id="deleteJourneyBtn" class="btn-danger" onclick="deleteJourney()">Delete
+                        Journey</button>
+                    <button type="submit" class="btn-primary">Update</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Budget Modal -->
     <div id="budgetModal" class="modal">
         <div class="modal-content">
             <h2>Set Budget</h2>
-            <div class="form-line"></div>
-
             <form id="budgetForm">
-                <div class="form-group">
-                    <label for="budget_amount">Budget Amount *</label>
-                    <input type="number" id="budget_amount" name="amount" step="0.01" min="0.01"
-                        placeholder="Enter your journey budget" required>
-                </div>
-
+                <div class="form-group"><label>Budget Amount *</label><input type="number" id="budget_amount"
+                        name="amount" step="0.01" min="0.01" title="Budget Amount" required></div>
                 <div class="form-buttons">
-                    <button type="submit" class="form-btn form-btn-submit">Set Budget</button>
-                    <button type="button" class="form-btn form-btn-cancel" onclick="closeBudgetModal()">Cancel</button>
+                    <button type="button" class="btn-secondary" onclick="closeBudgetModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">Set Budget</button>
                 </div>
             </form>
         </div>
     </div>
+    <div id="editBudgetModal" class="modal">
+        <div class="modal-content">
+            <h2>Edit Budget</h2>
+            <div class="form-line"></div>
+
+            <form id="editBudgetForm">
+                <div class="form-group">
+                    <label for="edit_budget_amount">Update Budget Amount *</label>
+                    <input type="number" id="edit_budget_amount" name="amount" step="0.01" min="0.01" required>
+                </div>
+
+                <div class="form-buttons">
+                    <button type="submit" class="form-btn form-btn-submit btn-secondary">Update Budget</button>
+                    <button type="button" class="form-btn form-btn-cancel btn-secondary"
+                        onclick="closeEditBudgetModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div id="journey-data" data-jid="{{ JOURNEY.Jid }}" data-name="{{ JOURNEY.J_name }}"
         data-start="{{ JOURNEY.Start_date.strftime('%Y-%m-%d') }}"
         data-end="{{ JOURNEY.end_date.strftime('%Y-%m-%d') }}" data-desc="{{ JOURNEY.description or '' }}"
-        style="display: none;">
-    </div>
-
+        style="display: none;"></div>
     <script src="{{url_for('static',filename='js/journey.js')}}"></script>
 </body>
 
